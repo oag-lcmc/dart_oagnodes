@@ -9,8 +9,6 @@ void main() {
   group('Basic node test', () {
     const success = Identity(Status.success);
 
-    const status = Status.success;
-
     test('Identity test', () {
       expect(success == Identity.success, isTrue);
       expect(success.hashCode == Identity.success.hashCode, isTrue);
