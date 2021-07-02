@@ -2,7 +2,210 @@ import 'dart:math';
 import 'package:oagnodes/oagnodes.dart';
 
 void main() {
-  final counter = Counter(1);
+  evaluatorExample();
+  dataNodeExample();
+  closureExample();
+  identityExample();
+  selectorExample();
+  sequenceExample();
+}
+
+void evaluatorExample() {
+  final random = Random();
+
+  final randomSuccess0 = Closure(() {
+    if (random.nextDouble() > 0.95) {
+      print('rs0');
+      return Status.success;
+    }
+    return Status.failure;
+  });
+
+  final randomSuccess1 = Closure(() {
+    if (random.nextDouble() > 0.95) {
+      print('rs1');
+      return Status.success;
+    }
+    return Status.failure;
+  });
+
+  final evaluator = Sequence([
+    Evaluator([
+      Identity.success,
+      randomSuccess0,
+      randomSuccess1,
+    ]),
+    Print('evaluator finished'),
+  ], isPartial: false);
+
+  while (evaluator.update() != Status.success) {}
+}
+
+void selectorExample() {
+  // changing the value of this variable will change the behavior of the
+  // selector
+  var x = 1;
+
+  // checks if x is even; returns Status.success if it is, Status.failure if not
+  final isEven = Closure(() => x % 2 == 0 ? Status.success : Status.failure);
+
+  // increments x by 1
+  final incrementByOne = makeClosure(action: () => ++x);
+
+  final selector = Selector(
+    [
+      // the first selector node is evaluated; it is a sequence node
+      Sequence([
+        // the first sequence node is evaluated: is x even?
+        isEven,
+        // if it is, the second sequence node is evaluated: print a statement
+        makeClosure(action: () => print('selector node 1: x == $x; even')),
+      ], isPartial: false),
+      // if x is not even, the second selector node is evaluated because
+      // the first one failed, this node simply increments x by one
+      Sequence([
+        incrementByOne,
+        Print('selector node 2: x == $x; odd'),
+      ], isPartial: false),
+    ],
+    isPartial: false,
+  );
+
+  // on first iteration, x is odd, so the selector fails the first node
+  // on subsequent iterations, x is even, so only the second node executes
+  // this behavior is equivalent to:
+  // var x = 1;
+  // for (var i = 0; i != 4; ++i) {
+  //   if (x % 2 == 0) {
+  //     print('selector node 1: x == $x; even');
+  //   } else {
+  //     ++x;
+  //     print('selector node 2: x == $x; odd');
+  //   }
+  // }
+  for (var i = 0; i != 4; ++i) {
+    if (selector.update() != Status.running) {
+      // reset is necessary to re-evaluate the selector nodes from the beginning
+      selector.reset();
+    }
+  }
+}
+
+void sequenceExample() {
+  var x = 0;
+  var incrementByOne = makeClosure(action: () => ++x);
+  var incrementByTwo = makeClosure(action: () => x += 2);
+  var incrementByThree = makeClosure(action: () => x += 3);
+  var reset = makeClosure(action: () => x = 0);
+
+  // evaluate nodes depending on the success of the
+  // previous node
+  final sequence = Sequence([
+    // increment by 1 and return Status.success
+    incrementByOne,
+    // increment by 2 and return Status.success
+    incrementByTwo,
+    // increment by 3 and return Status.success
+    incrementByThree,
+    makeClosure(action: () => print('value of x = $x')),
+    // reset x back to 0 at the end
+    reset
+  ], isPartial: true);
+
+  // partial sequence will require multiple calls
+  // to the update() method in order to go through
+  // composite children nodes
+  if (sequence.update() != Status.running) {
+    sequence.reset();
+  }
+  assert(x == 1);
+
+  if (sequence.update() != Status.running) {
+    sequence.reset();
+  }
+  assert(x == 3);
+
+  if (sequence.update() != Status.running) {
+    sequence.reset();
+  }
+  assert(x == 6);
+
+  if (sequence.update() != Status.running) {
+    sequence.reset();
+  }
+}
+
+// A class to be used as a reference to an int
+class IntReference {
+  int value;
+  IntReference(this.value);
+}
+
+class IncrementByOne extends DataNode<IntReference> {
+  IncrementByOne(IntReference data) : super(data);
+
+  @override
+  Status update() {
+    // increment the int value stored by the IntReference instance by one.
+    ++data.value;
+    return Status.success;
+  }
+}
+
+class Multiply extends DataNode<IntReference> {
+  final int multiplier;
+  Multiply(this.multiplier, IntReference data) : super(data);
+
+  @override
+  Status update() {
+    // multiply the int value stored by the IntReference instance by the
+    // specified multiplier argument
+    data.value *= multiplier;
+    return Status.success;
+  }
+}
+
+void dataNodeExample() {
+  final intRef = IntReference(0);
+  assert(intRef.value == 0);
+
+  final increment = IncrementByOne(intRef);
+  increment.update();
+  increment.update();
+  assert(intRef.value == 2);
+
+  final multiply = Multiply(2, intRef);
+  multiply.update();
+  assert(intRef.value == 4);
+}
+
+void closureExample() {
+  var x = 0;
+
+  final closure = Closure(() {
+    // captured from local scope
+    return ++x % 2 == 0 ? Status.success : Status.failure;
+  });
+
+  assert(closure.update() == Status.failure);
+  assert(closure.update() == Status.success);
+  assert(closure.update() == Status.failure);
+}
+
+void identityExample() {
+  final success = const Identity(Status.success);
+  // always returns the specified Status
+  assert(success.update() == Status.success);
+  assert(success.update() == Status.success);
+
+  final otherSuccess = Identity(Status.success);
+  // two instances with the same Status compare as equal
+  assert(success == otherSuccess);
+  assert(success.update() == otherSuccess.update());
+}
+
+/*
+final counter = Counter(1);
   final incrementer = RandomIncrementer(upperBound: 59);
   final sm = StateMachine(CounterState.values);
 
@@ -142,4 +345,4 @@ class IncrementCounter extends DataNode<Counter> {
     data.value += _incrementer.getValue();
     return Status.success;
   }
-}
+*/

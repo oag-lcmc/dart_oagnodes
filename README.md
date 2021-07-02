@@ -1,4 +1,4 @@
-A library for Dart developers.
+A library for Dart developers containing collection of classes to create and manage behavior trees and finite state machines.
 
 Created from templates made available by Stagehand under a BSD-style
 [license](https://github.com/dart-lang/stagehand/blob/master/LICENSE).

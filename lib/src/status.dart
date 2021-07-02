@@ -1,11 +1,12 @@
 part of nodes;
 
-/// Value returned by the `update()` method of all [Node] types.
-///
-/// 1. `failure` indicates that an operation was not successful.
-/// 2. `success` indicates that the operation was successful.
-/// 3. `running` indicates that the operation was not completed during
-/// a call to the [Node] instance `update()` method.
+/// Error thrown when a [Status] contains an invalid value.
+class StatusError extends Error {
+  final String message;
+  StatusError(this.message);
+}
+
+/// Status code returned by the `update()` method of all [Node] types.
 class Status {
   final int _value;
 
@@ -22,4 +23,18 @@ class Status {
 
   static Status _or(final Status lhs, final Status rhs) =>
       Status._(lhs._value | rhs._value);
+
+  @override
+  String toString() {
+    switch (_value) {
+      case 1 << 0:
+        return 'Failure';
+      case 1 << 1:
+        return 'Success';
+      case 1 << 2:
+        return 'Running';
+      default:
+        throw StatusError('invalid status');
+    }
+  }
 }

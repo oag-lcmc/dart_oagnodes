@@ -1,23 +1,61 @@
 part of nodes;
 
-/// Takes in a [Function] argument that returns a [Status] value.
+/// A [Closure] takes a [Function] argument that returns a [Status]. The
+/// function is executed by a call to the `update()` method of the [Closure].
 ///
-/// The return value of the call to `update()` is the returned [Status] value of
-/// the argument function.
+/// The main use case of the [Closure] type is to avoid having to explicitly
+/// write/subclass a [Node] type and/or to capture the surrounding scope at
+/// declaration.
+///
+/// Example:
+///
+/// ```
+/// void closureExample() {
+///   var x = 0;
+///
+///   final closure = Closure(() {
+///     // capture x from local scope and compute a Status
+///     return ++x % 2 == 0 ? Status.success : Status.failure;
+///   });
+///
+///   assert(closure.update() == Status.failure);
+///   assert(closure.update() == Status.success);
+///   assert(closure.update() == Status.failure);
+/// }
+/// ```
 class Closure extends Node {
   final Status Function() _closure;
 
+  /// Construct a [Closure] with the specified [Function] argument.
   const Closure(final this._closure);
 
   @override
   Status update() => _closure();
 }
 
-/// Creates a [Closure] instance for the specified [Function] argument that returns
-/// the specified argument [Status] at every call.
+/// Creates a [Closure] instance for the specified [Function] argument returning
+/// a predetermined [Status] value. The default predetermined [Status] is
+/// `Status.success`.
+///
+/// This is a convenience function to construct [Closure] instances that do not
+/// compute a [Status] to return.
+///
+/// Example:
+///
+/// ```
+/// void main() {
+///   var value = 42;
+///
+///   // use convenience function to create a Closure
+///   final addToValue = makeClosure(action: () => ++value);
+///
+///   assert(addToValue.update() == Status.success);
+///   assert(value == 43);
+/// }
+/// ```
 Closure makeClosure({
-  final Status returning = Status.success,
   required final void Function() action,
+  final Status returning = Status.success,
 }) =>
     Closure(() {
       action();

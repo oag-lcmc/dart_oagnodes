@@ -1,5 +1,7 @@
 library nodes;
 
+import 'dart:async';
+
 // base
 part 'src/data_node.dart';
 part 'src/identity.dart';

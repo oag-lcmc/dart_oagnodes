@@ -10,6 +10,12 @@ part of nodes;
 /// If the [DurationMonitor] instance millisecond interval expires before the
 /// decorated [Node] instance returns the desired [Status], the monitor timer
 /// is reset.
+///
+/// This is useful if you want to ensure that the child [Node] returns a
+/// specific [Status] over time. The granularity of the checks if user decided
+/// by calling the `update()` method as often as desired:
+///   - Call it every frame
+///   - Call it within a desired millisecond time frame
 class DurationMonitor extends Decorator {
   final _MillisecondMonitor _monitor;
   final Status _desired;
@@ -34,6 +40,7 @@ class DurationMonitor extends Decorator {
         _waiting = waiting,
         super(node);
 
+  /// Millisecond count since the last call to the `update()` method.
   int get elapsed => _monitor._elapsedMilliseconds;
 
   /// Resets the elapsed time of the [DurationMonitor] instance to 0.

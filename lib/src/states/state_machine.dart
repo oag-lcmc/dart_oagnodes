@@ -109,10 +109,15 @@ class StateMachine<TEnum> extends _AnyStateMachine {
   }
 }
 
+int _enumAsInt<TEnum>(final TEnum entry) => (entry as dynamic).index as int;
+
+/// Verifies that every value in `values` has an `index` property that is
+/// and that the [List] contains is zero-indexed and increments by one for each
+/// subsequent value.
 bool _isIndexedFromZeroIncrementally<TEnum>(final List<TEnum> values) {
   for (var i = 0; i != values.length; ++i) {
     try {
-      (values[i] as dynamic).index == i;
+      _enumAsInt(values[i]) == i;
     } on NoSuchMethodError {
       return false;
     } on Exception {
@@ -124,5 +129,3 @@ bool _isIndexedFromZeroIncrementally<TEnum>(final List<TEnum> values) {
 
   return true;
 }
-
-int _enumAsInt<TEnum>(final TEnum entry) => (entry as dynamic).index as int;

@@ -1,11 +1,11 @@
 part of nodes;
 
-/// Prints a message by calling the Dart `print(message)` function where `message` is
-/// the specified argument [String] when the `update()` method of the [Print] instance
-/// is called.
+/// The [Print] node forwards its [String] argument to a call to the Dart
+/// `print()` function when the [Print] instance calls its `update()` method.
 class Print extends Node {
   final String _message;
 
+  /// Constructs a [Print] node with the specified argument [String].
   const Print(final this._message);
 
   @override

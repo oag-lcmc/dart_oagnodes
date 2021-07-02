@@ -218,11 +218,26 @@ void main() {
       Identity.success,
     ]);
 
-    final randomSuccess = Closure(
-        () => random.nextDouble() > 0.95 ? Status.success : Status.failure);
+    final randomSuccess0 = Closure(() {
+      if (random.nextDouble() > 0.95) {
+        print('rs0');
+        return Status.success;
+      }
+      return Status.failure;
+    });
 
-    final evaluator =
-        Evaluator([Identity.success, randomSuccess, randomSuccess]);
+    final randomSuccess1 = Closure(() {
+      if (random.nextDouble() > 0.95) {
+        print('rs1');
+        return Status.success;
+      }
+      return Status.failure;
+    });
+
+    final evaluator = Sequence([
+      Evaluator([Identity.success, randomSuccess0, randomSuccess1]),
+      Print('evaluator finished'),
+    ], isPartial: false);
 
     test('Evaluator test', () {
       while (successEvaluator.update() != Status.success) {}
@@ -233,8 +248,12 @@ void main() {
       expect(successEvaluator.index == 0, isTrue);
 
       var evaluatorCounter = 0;
-      while (evaluator.update() != Status.success) {
-        ++evaluatorCounter;
+      for (var i = 0; i != 3; ++i) {
+        while (evaluator.update() != Status.success) {
+          ++evaluatorCounter;
+        }
+
+        evaluator.reset();
       }
 
       expect(evaluatorCounter >= 3, isTrue);

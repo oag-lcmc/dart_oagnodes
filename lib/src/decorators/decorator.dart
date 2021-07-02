@@ -4,6 +4,7 @@ part of nodes;
 abstract class Decorator extends Node {
   final Node _node;
 
+  /// Construct a [Decorator] for the specified argument [Node].
   const Decorator(final this._node);
 
   @override
