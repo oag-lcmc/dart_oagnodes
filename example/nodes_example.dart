@@ -2,12 +2,66 @@ import 'dart:math';
 import 'package:oagnodes/oagnodes.dart';
 
 void main() {
+  subjectObserverExample();
   evaluatorExample();
   dataNodeExample();
   closureExample();
   identityExample();
   selectorExample();
   sequenceExample();
+}
+
+// reference to an int
+class IntRef {
+  int value;
+  IntRef(this.value);
+}
+
+// increments contained IntRef value by 1
+class AddToIntRef extends DataNode<IntRef> {
+  AddToIntRef(IntRef data) : super(data);
+
+  @override
+  Status update() {
+    ++data.value;
+    return Status.success;
+  }
+}
+
+void subjectObserverExample() {
+  // data to be observed
+  final ref = IntRef(0);
+
+  // the operation that triggers a subject notification
+  final addToIntRef = AddToIntRef(ref);
+
+  // emit notifications when adding to data
+  final subject = DataSubject(addToIntRef);
+
+  final observer = AutoDataObserver<IntRef, IntRef>(
+    // initialData must refer to a different instance than the subject
+    // data instance
+    initialData: IntRef(-1),
+    // comparison mechanics: two IntRef instances are equal if their
+    // value is equal
+    comparer: (a, b) => a.value != b.value,
+    // assign mechanics: update the contained data with the subject data
+    assigner: (a, b) => a.value = b.value,
+    // update mechanics: if the value is assigned, print it out
+    updater: (data) {
+      print('data value is ${data.value}');
+      return Status.success;
+    }, // print value when updated
+  );
+
+  subject.subscribe(observer); // observe changes of subject
+
+  assert(ref.value != observer.data.value);
+
+  // calls addToIntRef.update() and emits notification to observers
+  subject.update();
+
+  assert(ref.value == observer.data.value);
 }
 
 void evaluatorExample() {

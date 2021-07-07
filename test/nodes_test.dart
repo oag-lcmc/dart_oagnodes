@@ -65,8 +65,9 @@ void main() {
 
   group('Composite node test', () {
     final partialSuccessSequence = Sequence(
-        [Identity.success, Identity.success, Identity.success],
-        isPartial: true);
+      [Identity.success, Identity.success, Identity.success],
+      isPartial: true,
+    );
 
     test('Partial sequence success test', () {
       expect(partialSuccessSequence.update() == Status.running, isTrue);
@@ -92,8 +93,10 @@ void main() {
       expect(partialSuccessSequence.index == 3, isTrue);
     });
 
-    final fullSuccessSequence =
-        Sequence([Identity.success, Identity.success], isPartial: false);
+    final fullSuccessSequence = Sequence(
+      [Identity.success, Identity.success],
+      isPartial: false,
+    );
 
     test('Full sequence success test', () {
       expect(fullSuccessSequence.index != fullSuccessSequence.length, isTrue);
@@ -113,8 +116,9 @@ void main() {
     });
 
     final partialFailureSequence = Sequence(
-        [Identity.success, Identity.failure, Identity.success],
-        isPartial: true);
+      [Identity.success, Identity.failure, Identity.success],
+      isPartial: true,
+    );
 
     test('Partial sequence failure test', () {
       expect(partialFailureSequence.update() == Status.running, isTrue);
@@ -133,8 +137,9 @@ void main() {
     });
 
     final fullFailureSequence = Sequence(
-        [Identity.success, Identity.success, Identity.failure],
-        isPartial: false);
+      [Identity.success, Identity.success, Identity.failure],
+      isPartial: false,
+    );
 
     test('Full sequence failure test', () {
       expect(fullFailureSequence.index == 0, isTrue);
@@ -149,8 +154,9 @@ void main() {
     });
 
     final partialSuccessSelector = Selector(
-        [Identity.failure, Identity.failure, Identity.success],
-        isPartial: true);
+      [Identity.failure, Identity.failure, Identity.success],
+      isPartial: true,
+    );
 
     test('Partial selector success test', () {
       expect(partialSuccessSelector.index == 0, isTrue);
@@ -165,8 +171,9 @@ void main() {
     });
 
     final fullSuccessSelector = Selector(
-        [Identity.failure, Identity.success, Identity.failure],
-        isPartial: false);
+      [Identity.failure, Identity.success, Identity.failure],
+      isPartial: false,
+    );
 
     test('Full selector success test', () {
       expect(fullSuccessSelector.update() == Status.success, isTrue);
@@ -179,8 +186,9 @@ void main() {
     });
 
     final partialFailureSelector = Selector(
-        [Identity.failure, Identity.failure, Identity.failure],
-        isPartial: true);
+      [Identity.failure, Identity.failure, Identity.failure],
+      isPartial: true,
+    );
 
     test('Partial selector failure test', () {
       expect(partialFailureSelector.index == 0, isTrue);
@@ -196,8 +204,9 @@ void main() {
     });
 
     final fullFailureSelector = Selector(
-        [Identity.failure, Identity.failure, Identity.failure],
-        isPartial: false);
+      [Identity.failure, Identity.failure, Identity.failure],
+      isPartial: false,
+    );
 
     test('Full selector failure test', () {
       expect(fullFailureSelector.index == 0, isTrue);
@@ -234,10 +243,13 @@ void main() {
       return Status.failure;
     });
 
-    final evaluator = Sequence([
-      Evaluator([Identity.success, randomSuccess0, randomSuccess1]),
-      Print('evaluator finished'),
-    ], isPartial: false);
+    final evaluator = Sequence(
+      [
+        Evaluator([Identity.success, randomSuccess0, randomSuccess1]),
+        Print('evaluator finished'),
+      ],
+      isPartial: false,
+    );
 
     test('Evaluator test', () {
       while (successEvaluator.update() != Status.success) {}
@@ -257,6 +269,34 @@ void main() {
       }
 
       expect(evaluatorCounter >= 3, isTrue);
+    });
+  });
+
+  group('Notifier node test', () {
+    final counter = Counter(0);
+    final incrementer = RandomIncrementer(upperBound: 3);
+    final subject = DataSubject(IncrementCounter(counter, incrementer));
+
+    final observerA = DataObserver<Counter, Counter>(
+      initialData: Counter(0),
+      comparer: (counter, otherCounter) {
+        print('previous counter.value = ${counter.value}');
+        print('notifier counter.value = ${otherCounter.value}');
+        return counter.value != otherCounter.value;
+      },
+      assigner: (lhs, rhs) => lhs.value = rhs.value,
+      updater: (counter) {
+        print('updated ${counter.runtimeType}: ${counter.value}');
+        return Status.success;
+      },
+    );
+
+    subject.subscribe(observerA);
+
+    test('Subject tests', () {
+      expect(counter.value == observerA.data.value, isTrue);
+      subject.update();
+      expect(counter.value == observerA.data.value, isTrue);
     });
   });
 

@@ -1,3 +1,7 @@
+0.0.3
+
+- Added the subject-observer types
+
 0.0.2
 
 - Additional documentation
