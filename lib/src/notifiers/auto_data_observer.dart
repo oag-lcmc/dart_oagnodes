@@ -1,9 +1,13 @@
 part of nodes;
 
+/// Convenience alias for an [AutoDataObserver] that operates and receives the
+/// same data type.
+typedef SingleAutoDataObserver<T> = AutoDataObserver<T, T>;
+
 /// The [AutoDataObserver] is able to receive notifications from a [DataSubject]
 /// and automatically calls its `update()` method when it receives a
 /// notification and its `comparer` [Function] member evaluates to `true`.
-class AutoDataObserver<T, U extends T> extends _DataObserverTemplate<T, U> {
+class AutoDataObserver<T, U> extends _DataObserverTemplate<T, U> {
   Status _status;
 
   /// Constructs an [AutoDataObserver] that it will automatically call the
@@ -18,15 +22,15 @@ class AutoDataObserver<T, U extends T> extends _DataObserverTemplate<T, U> {
   /// `update()` method if the [DataObserver] determined to that a change
   /// occurred.
   AutoDataObserver({
-    required T initialData,
-    required bool Function(T, U) comparer,
-    required void Function(T, U) assigner,
-    required Status Function(T) updater,
+    required T data,
+    required _ObserverUpdate<T> updater,
+    _ObserverComparison<T, U>? comparer,
+    _ObserverAssignation<T, U>? assigner,
   })  : _status = Status.failure,
         super(
-          initialData: initialData,
-          comparer: comparer,
-          assigner: assigner,
+          data: data,
+          comparer: comparer ?? DataObserver.compareTrue,
+          assigner: assigner ?? DataObserver.assignNone,
           updater: updater,
         );
 
@@ -39,22 +43,23 @@ class AutoDataObserver<T, U extends T> extends _DataObserverTemplate<T, U> {
   /// notification or the `reset()` method is called.
   @override
   void receive(DataSubject<U> subject) {
-    assert(!identical(data, subject.data));
-
     if (comparer(data, subject.data)) {
       assigner(data, subject.data);
       // can perform pre-update operations here
       _status = updater(data);
+    } else {
+      _status = Status.failure;
     }
-
-    _status = Status.failure;
   }
 
+  /// Sets the cached [Status] to `Status.failure`.
   @override
   void reset() {
     _status = Status.failure;
   }
 
+  /// Returns the cached [Status] from the last notification the
+  /// [AutoDataObserver] received.
   @override
   Status update() {
     return _status;

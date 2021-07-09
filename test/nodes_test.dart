@@ -277,8 +277,8 @@ void main() {
     final incrementer = RandomIncrementer(upperBound: 3);
     final subject = DataSubject(IncrementCounter(counter, incrementer));
 
-    final observerA = DataObserver<Counter, Counter>(
-      initialData: Counter(0),
+    final observerA = SingleDataObserver<Counter>(
+      data: Counter(0),
       comparer: (counter, otherCounter) {
         print('previous counter.value = ${counter.value}');
         print('notifier counter.value = ${otherCounter.value}');
@@ -308,23 +308,19 @@ void main() {
     sm.define(
       CounterState.add,
       update: IncrementCounter(counter, incrementer),
-      enter: makeClosure(
-          action: () =>
-              print('ENTER ${CounterState.add} @ counter = ${counter.value}')),
+      enter: makeClosure(() =>
+          print('ENTER ${CounterState.add} @ counter = ${counter.value}')),
       exit: makeClosure(
-          action: () =>
-              print('EXIT ${CounterState.add} @ counter = ${counter.value}')),
+          () => print('EXIT ${CounterState.add} @ counter = ${counter.value}')),
     );
 
     sm.define(
       CounterState.subtract,
       update: IncrementCounter(counter, incrementer),
-      enter: makeClosure(
-          action: () => print(
-              'ENTER ${CounterState.subtract} @ counter = ${counter.value}')),
-      exit: makeClosure(
-          action: () => print(
-              'EXIT ${CounterState.subtract} @ counter = ${counter.value}')),
+      enter: makeClosure(() =>
+          print('ENTER ${CounterState.subtract} @ counter = ${counter.value}')),
+      exit: makeClosure(() =>
+          print('EXIT ${CounterState.subtract} @ counter = ${counter.value}')),
     );
 
     sm.transition(

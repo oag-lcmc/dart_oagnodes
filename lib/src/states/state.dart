@@ -12,18 +12,28 @@ class _State extends Node {
       Sequence([Identity.running], isPartial: false);
 
   /// Placeholder [_State] to initialize a [List] of [_State].
-  static final _invalid = _State(_AnyStateMachine._invalid);
+  static final _invalid = _State(_StateMachineBase._invalid, isPartial: true);
 
   final _Transitional _transitional;
   Sequence _sequence;
 
   /// Constructs a [_State] dependant on the whether the specified argument
   /// nodes are null or not.
+  /// - `machine` is the [_StateMachineBase] this [_State] belongs to.
+  /// - `enter` is the [Node] called whenever the state machine that contains
+  /// this [State] first enters the state.
+  /// - `update` is the [Node] called whenever there isn't a transition after
+  /// the [_State] has successfully evaluated the `enter` [Node].
+  /// - `exit` is the [Node] called before the state machine that contains
+  /// this [_State] transitions to a different [_State].
+  /// - `isPartial` determines the evaluation semantics of the internal [_State]
+  /// [Sequence].
   _State(
-    final _AnyStateMachine machine, {
-    final Node? update,
+    final _StateMachineBase machine, {
     final Node? enter,
+    final Node? update,
     final Node? exit,
+    required final bool isPartial,
   })  :
         // the update part of the state will check for transitions, if no
         // transition is triggered or exists, the update method is called for
@@ -36,20 +46,20 @@ class _State extends Node {
         ? exit != null
             ? Sequence(
                 [enter, _transitional, exit, _MachineTransition(machine)],
-                isPartial: true,
+                isPartial: isPartial,
               )
             : Sequence(
                 [enter, _transitional, _MachineTransition(machine)],
-                isPartial: true,
+                isPartial: isPartial,
               )
         : exit != null
             ? _sequence = Sequence(
                 [_transitional, exit, _MachineTransition(machine)],
-                isPartial: true,
+                isPartial: isPartial,
               )
             : Sequence(
                 [_transitional, _MachineTransition(machine)],
-                isPartial: true,
+                isPartial: isPartial,
               );
     */
     if (enter != null) {
@@ -58,26 +68,26 @@ class _State extends Node {
         // and an exit node
         _sequence = Sequence(
           [enter, _transitional, exit, _MachineTransition(machine)],
-          isPartial: true,
+          isPartial: isPartial,
         );
       } else {
         // but no exit node
         _sequence = Sequence(
           [enter, _transitional, _MachineTransition(machine)],
-          isPartial: true,
+          isPartial: isPartial,
         );
       }
     } else if (exit != null) {
       // there's no enter node, but there is an exit node
       _sequence = Sequence(
         [_transitional, exit, _MachineTransition(machine)],
-        isPartial: true,
+        isPartial: isPartial,
       );
     } else {
       // there is no enter or exit node
       _sequence = Sequence(
         [_transitional, _MachineTransition(machine)],
-        isPartial: true,
+        isPartial: isPartial,
       );
     }
   }
@@ -110,15 +120,15 @@ class _Transition {
 /// A [_Transitional] has two outcomes for a call to its `update()` method:
 ///
 /// 1. One of the [_Transition] nodes returns [Status.success], the associated
-/// [_AnyStateMachine] will have its `_nextIndex` set to the `_key` of the
+/// [_StateMachineBase] will have its `_nextIndex` set to the `_key` of the
 /// [_Transition] and the `update()` method will return `Status.success`, which
-/// in turn allows the internal [Sequence] of the [_AnyStateMachine] to go to
+/// in turn allows the internal [Sequence] of the [_StateMachineBase] to go to
 /// the exit node (if any). The decorated [Node] is not evaluated at all.
 /// 2. None of the [_Transition] nodes return [Status.success]. The decorated
 /// [Node] is fully evaluated by a call to `update()` and a call to `reset()` if
 /// the decorated [Node] returns a [Status] different from `Status.running`.
 class _Transitional extends Decorator {
-  final _AnyStateMachine _machine;
+  final _StateMachineBase _machine;
   final List<_Transition> _transitions;
 
   _Transitional(this._machine, Node node)
@@ -164,7 +174,7 @@ class _Transitional extends Decorator {
 /// `Status.success`. It represents the switch from the current state to the
 /// next state.
 class _MachineTransition extends Node {
-  final _AnyStateMachine _machine;
+  final _StateMachineBase _machine;
 
   _MachineTransition(final this._machine);
 

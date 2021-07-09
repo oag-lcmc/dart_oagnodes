@@ -2,66 +2,215 @@ import 'dart:math';
 import 'package:oagnodes/oagnodes.dart';
 
 void main() {
-  subjectObserverExample();
-  evaluatorExample();
-  dataNodeExample();
-  closureExample();
-  identityExample();
-  selectorExample();
-  sequenceExample();
+  subjectAutoDataObserverExample();
+  // subjectDataObserverExample();
+  // evaluatorExample();
+  // dataNodeExample();
+  // closureExample();
+  // identityExample();
+  // selectorExample();
+  // sequenceExample();
 }
 
-// reference to an int
-class IntRef {
+// A reference to an int
+class IntReference {
   int value;
-  IntRef(this.value);
+  IntReference(this.value);
 }
 
-// increments contained IntRef value by 1
-class AddToIntRef extends DataNode<IntRef> {
-  AddToIntRef(IntRef data) : super(data);
+/// Increments a [IntReference] by some value.
+class IncrementIntReference extends DataNode<IntReference> {
+  final int step;
+
+  IncrementIntReference(this.step, IntReference data) : super(data);
 
   @override
   Status update() {
-    ++data.value;
+    // increment the int value stored by the IntReference instance by one.
+    print('increment by $step');
+    data.value += step;
     return Status.success;
   }
 }
 
-void subjectObserverExample() {
-  // data to be observed
-  final ref = IntRef(0);
+/// Two state machine states
+enum State { add, subtract }
 
-  // the operation that triggers a subject notification
-  final addToIntRef = AddToIntRef(ref);
+StateMachine<State> makeIncrementStateMachine() {
+  final random = Random();
 
-  // emit notifications when adding to data
-  final subject = DataSubject(addToIntRef);
+  final ref = IntReference(1);
 
-  final observer = AutoDataObserver<IntRef, IntRef>(
-    // initialData must refer to a different instance than the subject
-    // data instance
-    initialData: IntRef(-1),
-    // comparison mechanics: two IntRef instances are equal if their
-    // value is equal
+  final stateMachine = StateMachine(State.values);
+  stateMachine.define(
+    State.add, // increment by 1, 2 or 3
+    update: IncrementIntReference(random.nextInt(3) + 1, ref),
+  );
+  // subtract state modifies ref value by subtracting 2
+  stateMachine.define(
+    State.subtract, // decrement by -2 or -1
+    update: IncrementIntReference(-random.nextInt(2) - 1, ref),
+  );
+
+  // transition from add to subtract when
+  // ref.value is divisible by 7
+  stateMachine.transition(
+    from: State.add,
+    to: State.subtract,
+    on: Closure(() {
+      if (ref.value % 7 == 0) {
+        print('add -> subtract @ value = ${ref.value}');
+        return Status.success;
+      } else {
+        return Status.failure;
+      }
+    }),
+  );
+
+  // transition from subtract to add when
+  // ref.value is less than -17; ref.value < -17
+  stateMachine.transition(
+    from: State.subtract,
+    to: State.add,
+    on: Closure(() {
+      if (ref.value < -17) {
+        print('subtract -> add @ value = ${ref.value}');
+        return Status.success;
+      } else {
+        return Status.failure;
+      }
+    }),
+  );
+
+  return stateMachine;
+}
+
+class DetectStateMachineTransition<TEnum>
+    extends DataNode<StateMachine<TEnum>> {
+  TEnum _previous;
+
+  DetectStateMachineTransition(StateMachine<TEnum> data)
+      : _previous = data.current,
+        super(data);
+
+  @override
+  Status update() {
+    final current = data.current;
+    data.update();
+    if (_previous != current) {
+      _previous = current;
+      return Status.success;
+    }
+
+    return Status.failure;
+  }
+}
+
+class UpdateStateMachine<TEnum> extends DataNode<StateMachine<TEnum>> {
+  UpdateStateMachine(StateMachine<TEnum> data) : super(data);
+
+  @override
+  Status update() {
+    final status = data.update();
+    print('updated machine: ${status.toString()}');
+    return status;
+  }
+}
+
+void subjectAutoDataObserverExample() {
+  final machine = makeIncrementStateMachine();
+
+  final subject = DataSubject(
+    UpdateStateMachine(machine),
+    // notify observers on Status.success and Status.running
+    notifications: [Status.success, Status.running],
+  );
+
+  // this is basically a while loop
+  final observer = SingleAutoDataObserver<StateMachine<State>>(
+    data: machine,
+    // stops updating on this comparison condition
+    comparer: (machine, _) => machine.current != State.subtract,
+    updater: (data) => subject.update(),
+  );
+
+  final otherObserver = SingleAutoDataObserver<StateMachine<State>>(
+    data: machine,
+    comparer: (_, __) => true,
+    updater: (data) {
+      print('other observer');
+      return Status.success;
+    },
+  );
+
+  subject.subscribe(observer);
+  subject.subscribe(otherObserver);
+
+  subject.update();
+}
+
+void subjectDataObserverExample() {
+  // data to be observed; int reference starting at 0
+  final ref = IntReference(0);
+
+  // add 1 to the value of the IntReference
+  final addOneToIntRef = IncrementIntReference(1, ref);
+
+  // subject.update() will call addToIntRef.update() and notify its
+  // subscribed observers if addToIntRef.update() returns Status.success
+  final subject = DataSubject(addOneToIntRef);
+
+  // observe changes to an IntRef and compare and assign from an IntRef
+  final observer = SingleDataObserver<IntReference>(
+    // the observer's initial data is another instance of the
+    // the subject's data type IntReference
+    data: IntReference(-1),
+    // comparison mechanics:
+    // trigger assignment when a.value != b.value
+    // a.value is the the observer's local data
+    // b.value is the subject's local data
     comparer: (a, b) => a.value != b.value,
-    // assign mechanics: update the contained data with the subject data
-    assigner: (a, b) => a.value = b.value,
-    // update mechanics: if the value is assigned, print it out
+    // assignment mechanics:
+    // copy the value of b.value into a.value
+    assigner: (a, b) {
+      print('a.value = ${a.value}, b.value = ${b.value}');
+      a.value = b.value;
+    },
+    // updating mechanics:
+    // print out the value of the observer's value
     updater: (data) {
       print('data value is ${data.value}');
       return Status.success;
-    }, // print value when updated
+    },
   );
 
-  subject.subscribe(observer); // observe changes of subject
+  // observer subscribes to notifications of subject
+  subject.subscribe(observer);
 
-  assert(ref.value != observer.data.value);
+  // observer has not changed because it has not received
+  // a notification from the subject is subscibed to
+  assert(!observer.hasChanged);
 
-  // calls addToIntRef.update() and emits notification to observers
+  // will not do anything because observer.hasChanged == false
+  assert(observer.update() == Status.failure);
+  assert(observer.data.value != subject.data.value);
+
+  // emits notification to observers if the contained node
+  // returns Status.success
   subject.update();
 
+  // the comparer verified that ref.value != observer.data.value
+  // and then assigned the subject's data to the observer's data
   assert(ref.value == observer.data.value);
+
+  // the subject emitted an a notification, the observer is now
+  // marked as changed because the comparer returned true
+  // it has also been assigned the newly updated value
+  assert(observer.hasChanged);
+
+  // the call to its update() method will perform an update
+  // on the assigned value; this observer simply prints the value
+  assert(observer.update() == Status.success);
 }
 
 void evaluatorExample() {
@@ -104,7 +253,7 @@ void selectorExample() {
   final isEven = Closure(() => x % 2 == 0 ? Status.success : Status.failure);
 
   // increments x by 1
-  final incrementByOne = makeClosure(action: () => ++x);
+  final incrementByOne = makeClosure(() => ++x);
 
   final selector = Selector(
     [
@@ -113,7 +262,7 @@ void selectorExample() {
         // the first sequence node is evaluated: is x even?
         isEven,
         // if it is, the second sequence node is evaluated: print a statement
-        makeClosure(action: () => print('selector node 1: x == $x; even')),
+        makeClosure(() => print('selector node 1: x == $x; even')),
       ], isPartial: false),
       // if x is not even, the second selector node is evaluated because
       // the first one failed, this node simply increments x by one
@@ -147,10 +296,10 @@ void selectorExample() {
 
 void sequenceExample() {
   var x = 0;
-  var incrementByOne = makeClosure(action: () => ++x);
-  var incrementByTwo = makeClosure(action: () => x += 2);
-  var incrementByThree = makeClosure(action: () => x += 3);
-  var reset = makeClosure(action: () => x = 0);
+  var incrementByOne = makeClosure(() => ++x);
+  var incrementByTwo = makeClosure(() => x += 2);
+  var incrementByThree = makeClosure(() => x += 3);
+  var reset = makeClosure(() => x = 0);
 
   // evaluate nodes depending on the success of the
   // previous node
@@ -161,7 +310,7 @@ void sequenceExample() {
     incrementByTwo,
     // increment by 3 and return Status.success
     incrementByThree,
-    makeClosure(action: () => print('value of x = $x')),
+    makeClosure(() => print('value of x = $x')),
     // reset x back to 0 at the end
     reset
   ], isPartial: true);
@@ -189,23 +338,6 @@ void sequenceExample() {
   }
 }
 
-// A class to be used as a reference to an int
-class IntReference {
-  int value;
-  IntReference(this.value);
-}
-
-class IncrementByOne extends DataNode<IntReference> {
-  IncrementByOne(IntReference data) : super(data);
-
-  @override
-  Status update() {
-    // increment the int value stored by the IntReference instance by one.
-    ++data.value;
-    return Status.success;
-  }
-}
-
 class Multiply extends DataNode<IntReference> {
   final int multiplier;
   Multiply(this.multiplier, IntReference data) : super(data);
@@ -223,7 +355,7 @@ void dataNodeExample() {
   final intRef = IntReference(0);
   assert(intRef.value == 0);
 
-  final increment = IncrementByOne(intRef);
+  final increment = IncrementIntReference(1, intRef);
   increment.update();
   increment.update();
   assert(intRef.value == 2);
@@ -257,146 +389,3 @@ void identityExample() {
   assert(success == otherSuccess);
   assert(success.update() == otherSuccess.update());
 }
-
-/*
-final counter = Counter(1);
-  final incrementer = RandomIncrementer(upperBound: 59);
-  final sm = StateMachine(CounterState.values);
-
-  final counterIncrementer = IncrementCounter(counter, incrementer);
-
-  // the add state repeatedly calls `counterIncrementer`.
-  sm.define(
-    CounterState.add,
-    update: Sequence(
-      [
-        counterIncrementer,
-        makeClosure(action: () => print('counter.value = ${counter.value}'))
-      ],
-      isPartial: false,
-    ),
-    enter: makeClosure(
-        action: () =>
-            print('ENTER ${CounterState.add} @ counter = ${counter.value}')),
-    exit: makeClosure(
-        action: () =>
-            print('EXIT ${CounterState.add} @ counter = ${counter.value}')),
-  );
-
-  // the subtract state repeatedly calls `counterIncrementer`.
-  sm.define(
-    CounterState.subtract,
-    update: Sequence(
-      [
-        counterIncrementer,
-        makeClosure(action: () => print('counter.value = ${counter.value}'))
-      ],
-      isPartial: false,
-    ),
-    enter: makeClosure(
-        action: () => print(
-            'ENTER ${CounterState.subtract} @ counter = ${counter.value}')),
-    exit: makeClosure(
-        action: () => print(
-            'EXIT ${CounterState.subtract} @ counter = ${counter.value}')),
-  );
-
-  /// define a transition from the add state to the subtract state
-  /// condition is `counter.value >= 512`
-  sm.transition(
-    from: CounterState.add,
-    to: CounterState.subtract,
-    on: Closure(() => counter.value > 512 ? Status.success : Status.failure),
-  );
-
-  const interval = 5;
-  final intervalMonitor = DurationMonitor(
-    counterIncrementer,
-    interval: interval,
-    expecting: Status.success,
-    waiting: Status.failure,
-  );
-
-  /// define a transition from the subtract state to the add state
-  /// condition is `counter.value <= 0 || `or the state machine has been in the add state
-  /// for at least `interval` milliseconds.
-  /// the subtract continually decrements the counter.value in every
-  /// call to `update()`.
-  sm.transition(
-    from: CounterState.subtract,
-    to: CounterState.add,
-    on: Selector(
-      [
-        Sequence([intervalMonitor, Print('transitioned due to time')],
-            isPartial: false),
-        Closure(() => counter.value <= 0 ? Status.success : Status.failure),
-      ],
-      isPartial: true,
-    ),
-  );
-
-  // set the current state machine state
-  sm.set(to: CounterState.add);
-
-  // get the current state of the state machine
-  var previousState = sm.current;
-
-  // update until state switch occurs
-  while (sm.current == previousState) {
-    sm.update();
-  }
-
-  previousState = sm.current;
-
-  // update until state switch occurs
-  while (sm.current == previousState) {
-    sm.update();
-  }
-}
-
-/// Two state machine states for [Counter] instances: adding and subtracting
-enum CounterState { add, subtract }
-
-/// Simple data structure to pass `value` around different nodes/states.
-class Counter {
-  int value;
-
-  Counter(final this.value);
-}
-
-/// Base class/interface for a class that returns some integer value.
-abstract class Incrementer {
-  int getValue();
-}
-
-/// Concrete implementation of [Incrementer] that returns a random
-/// positive or negative integer from the `getValue()` method up to
-/// the argument `upperBound` (exclusive).
-class RandomIncrementer implements Incrementer {
-  final Random _random = Random();
-  final int _upperBound;
-
-  RandomIncrementer({required int upperBound}) : _upperBound = upperBound;
-
-  @override
-  int getValue() => _random.nextBool()
-      ? _random.nextInt(_upperBound)
-      : -_random.nextInt(_upperBound);
-}
-
-/// Concrete [DataNode] subclass that computes on an instance of the [Counter]
-/// class using a dependency injected [Incrementer] instance.
-///
-/// A call to the `update()` method of this [Node] subtype will add to the
-/// `value` data member of its [Counter] instance.
-class IncrementCounter extends DataNode<Counter> {
-  final Incrementer _incrementer;
-
-  IncrementCounter(Counter data, this._incrementer) : super(data);
-
-  @override
-  Status update() {
-    data.value += _incrementer.getValue();
-    return Status.success;
-  }
-*/

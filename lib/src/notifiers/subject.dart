@@ -5,73 +5,18 @@ part of nodes;
 /// will handle notifications.
 ///
 /// The [Subject] itself is passed covariantly to the [Observer] list so that
-/// different concrete [Observer] types can handle different concrete [Subject]
-/// types as desired.
-///
-/// Example:
-///
-/// ```
-/// // reference to an int
-/// class IntRef {
-///   int value;
-///   IntRef(this.value);
-/// }
-///
-// increments contained IntRef value by 1
-/// class AddToIntRef extends DataNode<IntRef> {
-///   AddToIntRef(IntRef data) : super(data);
-///
-///   @override
-///   Status update() {
-///     ++data.value;
-///     return Status.success;
-///   }
-/// }
-///
-/// void subjectObserverExample() {
-///   // data to be observed
-///   final ref = IntRef(0);
-///
-///   // the operation that triggers a subject notification
-///   final addToIntRef = AddToIntRef(ref);
-///
-///   // emit notifications when adding to data
-///   final subject = DataSubject(addToIntRef);
-///
-///   final observer = AutoDataObserver<IntRef, IntRef>(
-///     // initialData must refer to a different instance
-///     // than the subject data instance
-///     initialData: IntRef(-1),
-///     // comparison mechanics: two IntRef instances are
-///     // equal if their value is equal, emit notifications
-///     // when their values are different
-///     comparer: (a, b) => a.value != b.value,
-///     // assign mechanics: update the contained data
-///     // with the subject data
-///     assigner: (a, b) => a.value = b.value,
-///     // update mechanics: if the value is assigned, print it out
-///     updater: (data) {
-///       print('data value is ${data.value}');
-///       return Status.success;
-///     },
-///   );
-///
-///   subject.subscribe(observer); // observe changes of subject
-///
-///   assert(ref.value != observer.data.value);
-///
-///   // calls addToIntRef.update() and emits notification
-///   // to observers
-///   subject.update();
-///
-///   assert(ref.value == observer.data.value);
-/// }
-/// ```
+/// different concrete [Observer] types can handle different [Subject] type
+/// subscriptions types as desired.
 abstract class Subject extends Node {
+  final Status _notifications;
   final Node _subject;
   final List<Observer> _observers;
 
-  Subject(this._subject) : _observers = List.empty(growable: true);
+  Subject(
+    this._subject, {
+    final List<Status> notifyStatus = const [Status.success],
+  })  : _notifications = notifyStatus.reduce((a, b) => Status._or(a, b)),
+        _observers = List.empty(growable: true);
 
   /// Add an [Observer] to the notification list.
   void subscribe(Observer observer) {
@@ -96,14 +41,18 @@ abstract class Subject extends Node {
     }
   }
 
+  /// Reset the `_subject` [Node] of this instance.
   @override
   void reset() => _subject.reset();
 
+  /// Updates the contained [Node] and notifies all subscribed observers if
+  /// the resulting [Status] of the contained [Node] is `Status.success`. The
+  /// resulting [Status] is returned by this method in all scenarios.
   @override
   Status update() {
     final status = _subject.update();
 
-    if (status == Status.success) {
+    if (_notifications._value & status._value > 0) {
       notify();
     }
 
@@ -111,14 +60,18 @@ abstract class Subject extends Node {
   }
 }
 
-/// A [DataSubject] has some `data`.
+/// A [DataSubject] has some `data` that can be passed along to [DataObserver]
+/// types that are subscribed to the [DataSubject]. The type argument of the
+/// parameter type `T` must be have reference semantics.
 class DataSubject<T> extends Subject {
   final T data;
 
   /// Construct a [DataSubject] with some `data`. The `data` is accessible
   /// because concrete this instance passes itself to a matching [DataObserver]
   /// whose `receive(subject)` method takes in a [DataSubject].
-  DataSubject(DataNode<T> subject)
-      : data = subject.data,
-        super(subject);
+  DataSubject(
+    DataNode<T> subject, {
+    final List<Status> notifications = const [Status.success],
+  })  : data = subject.data,
+        super(subject, notifyStatus: notifications);
 }

@@ -47,14 +47,14 @@ class Closure extends Node {
 ///   var value = 42;
 ///
 ///   // use convenience function to create a Closure
-///   final addToValue = makeClosure(action: () => ++value);
+///   final addToValue = makeClosure(() => ++value);
 ///
 ///   assert(addToValue.update() == Status.success);
 ///   assert(value == 43);
 /// }
 /// ```
-Closure makeClosure({
-  required final void Function() action,
+Closure makeClosure(
+  final void Function() action, {
   final Status returning = Status.success,
 }) =>
     Closure(() {

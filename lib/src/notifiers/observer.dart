@@ -2,7 +2,7 @@ part of nodes;
 
 /// The [Observer] abstract base class provides an interface to receive
 /// notifications from a [Subject] instance.
-/// 
+///
 /// See examples at the [Subject] documentation.
 abstract class Observer extends Node {
   const Observer();
@@ -13,13 +13,13 @@ abstract class Observer extends Node {
   void receive(covariant Subject subject);
 }
 
-typedef _ObserverComparison<T, U extends T> = bool Function(T, U);
-typedef _ObserverAssignation<T, U extends T> = void Function(T, U);
+typedef _ObserverComparison<T, U> = bool Function(T, U);
+typedef _ObserverAssignation<T, U> = void Function(T, U);
 typedef _ObserverUpdate<T> = Status Function(T);
 
-/// The [_DataObserverTemplate] class defines three template operations required
-/// by all data observers.
-abstract class _DataObserverTemplate<T, U extends T> extends Observer {
+/// The [_DataObserverTemplate] class is a base class for [DataObserver]
+/// template function object implementations.
+abstract class _DataObserverTemplate<T, U> extends Observer {
   /// The previous data to be compared to the new data from a notification.
   final T data;
 
@@ -35,9 +35,16 @@ abstract class _DataObserverTemplate<T, U extends T> extends Observer {
   final _ObserverUpdate<T> updater;
 
   const _DataObserverTemplate({
-    required T initialData,
-    required this.comparer,
-    required this.assigner,
-    required this.updater,
-  }) : data = initialData;
+    required final this.data,
+    required final this.updater,
+    required final this.comparer,
+    required final this.assigner,
+  });
+
+  @override
+  void receive(DataSubject<U> subject) {
+    if (comparer(data, subject.data)) {
+      assigner(data, subject.data);
+    }
+  }
 }

@@ -2,7 +2,7 @@ name: oagnodes
 description: >-
   A collection of classes to create and manage behavior trees and finite
   state machines.
-version: 0.0.3
+version: 0.0.4
 repository: https://github.com/oag-lcmc/dart_oagnodes
 
 environment:

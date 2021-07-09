@@ -1,9 +1,5 @@
 library nodes;
 
-import 'dart:ffi';
-
-//import 'dart:collection';
-
 // base
 part 'src/data_node.dart';
 part 'src/identity.dart';
@@ -29,9 +25,12 @@ part 'src/decorators/not.dart';
 part 'src/notifiers/subject.dart';
 part 'src/notifiers/observer.dart';
 part 'src/notifiers/data_observer.dart';
+part 'src/notifiers/data_node_observer.dart';
 part 'src/notifiers/auto_data_observer.dart';
 //part 'src/notifiers/notifier.dart';
 
 // state machines
+part 'src/states/state_machine_base.dart';
 part 'src/states/state_machine.dart';
+part 'src/states/state_notification_machine.dart';
 part 'src/states/state.dart';
