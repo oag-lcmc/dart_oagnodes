@@ -1,167 +1,187 @@
 part of nodes;
 
-/// The [DataObserver] is able to receive notifications from a [DataSubject]. It
+typedef ObserverComparison<T, U> = bool Function(T, U);
+typedef ObserverUpdate<T, U> = void Function(T, U);
+
+/// The [DataObserver] class is can subscribe to a [Subject] in order to be
+/// notified by that [Subject] when its `update()` method is called. The
+/// [DataObserver] will receive a notification along with a reference to the
+/// [Subject] that initiated the notification.
+///
+/// /// The [DataObserver] is able to receive notifications from a [DataSubject]. It
 /// must call the `update()` method itself or through a proxy in order to call
 /// the `updater` [Function] member.
 ///
 /// Example:
 ///
 /// ```
-/// /// A reference to an int
+/// // A reference to an int
 /// class IntReference {
 ///   int value;
 ///   IntReference(this.value);
 /// }
 ///
-/// /// Increments a [IntReference] by some value.
+/// /// Increments a [IntReference] by the `step` value.
 /// class IncrementIntReference extends DataNode<IntReference> {
 ///   final int step;
-///
 ///   IncrementIntReference(this.step, IntReference data) : super(data);
 ///
 ///   @override
 ///   Status update() {
-///     // increment the int value stored by the IntReference
-///     // instance by one.
 ///     data.value += step;
 ///     return Status.success;
 ///   }
 /// }
 ///
+/// /// Two state machine states
+/// enum State { add, subtract }
+///
+/// /// Define a state machine that increments to a number
+/// /// divisible by 7 and then subtracts until the number is
+/// /// less than < -17
+/// StateMachine<State> makeIncrementStateMachine() {
+///   final random = Random();
+///
+///   final ref = IntReference(1);
+///
+///   final stateMachine = StateMachine(State.values);
+///   stateMachine.define(
+///     State.add, // increment by 1, 2 or 3
+///     update: IncrementIntReference(random.nextInt(3) + 1, ref),
+///   );
+///   // subtract state modifies ref value by subtracting 2
+///   stateMachine.define(
+///     State.subtract, // decrement by -2 or -1
+///     update: IncrementIntReference(-random.nextInt(2) - 1, ref),
+///   );
+///
+///   // transition from add to subtract when
+///   // ref.value is divisible by 7
+///   stateMachine.transition(
+///     from: State.add,
+///     to: State.subtract,
+///     on: Closure(() {
+///       if (ref.value % 7 == 0) {
+///         print('add -> subtract @ value = ${ref.value}');
+///         return Status.success;
+///       } else {
+///         return Status.failure;
+///       }
+///     }),
+///   );
+///
+///   // transition from subtract to add when
+///   // ref.value is less than -17; ref.value < -17
+///   stateMachine.transition(
+///     from: State.subtract,
+///     to: State.add,
+///     on: Closure(() {
+///       if (ref.value < -17) {
+///         print('subtract -> add @ value = ${ref.value}');
+///         return Status.success;
+///       } else {
+///         return Status.failure;
+///       }
+///     }),
+///   );
+///
+///   return stateMachine;
+/// }
+///
+/// class UpdateStateMachine<TEnum> extends DataNode<StateMachine<TEnum>> {
+///   UpdateStateMachine(StateMachine<TEnum> data) : super(data);
+///
+///   @override
+///   Status update() => data.update();
+/// }
+///
 /// void subjectDataObserverExample() {
-///   // data to be observed; int reference starting at 0
-///   final ref = IntReference(0);
+///   final machine = makeIncrementStateMachine();
 ///
-///   // add 1 to the value of the IntReference
-///   final addOneToIntRef = IncrementIntReference(1, ref);
+///   // the subject notifies its observer every time the state
+///   // machine is updated
+///   final subject = DataSubject(
+///     UpdateStateMachine(machine),
+///     // notify observers when the state machine returns
+///     // Status.success or Status.running
+///     notifications: [Status.success, Status.running],
+///   );
 ///
-///   // subject.update() will call addToIntRef.update() and
-///   // notify its subscribed observers if addToIntRef.update()
-///   // returns Status.success
-///   final subject = DataSubject(addOneToIntRef);
-///
-///   // observe changes to an IntRef and compare and
-///   // assign from an IntRef
-///   final observer = DataObserver<IntReference, IntReference>(
-///     // the observer's initial data is another instance of the
-///     // the subject's data type IntReference
-///     initialData: IntReference(-1),
-///     // comparison mechanics:
-///     // trigger assignment when a.value != b.value
-///     // a.value is the the observer's local data
-///     // b.value is the subject's local data
-///     comparer: (a, b) => a.value != b.value,
-///     // assignment mechanics:
-///     // copy the value of b.value into a.value
-///     assigner: (a, b) {
-///       print('a.value = ${a.value}, b.value = ${b.value}');
-///       a.value = b.value;
-///     },
-///     // updating mechanics:
-///     // print out the value of the observer's value
-///     updater: (data) {
-///       print('data value is ${data.value}');
-///       return Status.success;
+///   // increments its data any time it receives a notification
+///   // from the observed subject.
+///   final countObserver = DataObserver<IntReference, StateMachine<State>>(
+///     data: IntReference(0),
+///     updater: (data, otherData) {
+///       print('counter: ${++data.value} @ ${otherData.current.toString()}');
 ///     },
 ///   );
 ///
-///   // observer subscribes to notifications of subject
+///   // any time this observer is notified, it updates its
+///   // notifying subject if its state has not changed;
+///   // this is similar to a white loop
+///   final observer = SingleDataObserver<StateMachine<State>>(
+///     data: machine,
+///     // will only request a subject update if the state
+///     // is not the subtract state
+///     comparer: (machine, _) => machine.current != State.subtract,
+///     updater: (data, otherData) => subject.update(),
+///   );
+///
+///   // the count observer subscribes first
+///   subject.subscribe(countObserver);
+///
+///   // the subject updating observer subscribes second because
+///   // it calls the subject's update method until it switches
+///   // states; by calling that update method every time, only the
+///   // first observer is updated, so this is placed last in order
+///   // to ensure that all observers are first notified before the
+///   // subject is updated again
 ///   subject.subscribe(observer);
 ///
-///   // observer has not changed because it has not received
-///   // a notification from the subject is subscibed to
-///   assert(!observer.hasChanged);
-///
-///   // will not do anything because observer.hasChanged == false
-///   assert(observer.update() == Status.failure);
-///   assert(observer.data.value != subject.data.value);
-///
-///   // emits notification to observers if the contained node
-///   // returns Status.success
 ///   subject.update();
-///
-///   // the comparer verified that ref.value != observer.data.value
-///   // and then assigned the subject's data to the observer's data
-///   assert(ref.value == observer.data.value);
-///
-///   // the subject emitted an a notification, the observer is now
-///   // marked as changed because the comparer returned true
-///   // it has also been assigned the newly updated value
-///   assert(observer.hasChanged);
-///
-///   // the call to its update() method will perform an update
-///   // on the assigned value; this observer simply prints the value
-///   assert(observer.update() == Status.success);
 /// }
 /// ```
-class DataObserver<T, U> extends _DataObserverTemplate<T, U> {
-  static final bool Function(Object?, Object?) compareTrue = _compareTrue;
-  static final void Function(Object?, Object?) assignNone = _assignNone;
+class DataObserver<T, U> extends Observer {
+  /// The previous data to be compared to the new data from a notification.
+  final T data;
 
-  bool _hasChanged;
+  /// Performs some operation on the data of this [DataObserver] and returns a
+  /// [Status] indicating the results of the operation.
+  final ObserverUpdate<T, U> updater;
 
-  /// Construct a [DataObserver] with the following parameters:
-  /// - `initialData` is the initial value of the [Observer] data that will be
-  /// compared to the first [DataSubject] notification's data.
-  /// - `comparer` determines whether two related data instances differ in a
-  /// way that should trigger an update during a call to the `update()` method.
-  /// - `assigner` updates the [Observer] data using the [Subject] data.
-  /// - `updater` is the action taken on the data during a call to the
-  /// `update()` method if the [DataObserver] determined to that a significant
-  /// change occurred.
+  /// Determines whether the observed `data` has changed by comparing it to
+  /// the `data` it receives from a [DataSubject] notification.
+  final ObserverComparison<T, U> comparer;
+
+  /// Constructs a [DataObserver] that can subscribe to some [Subject].
+  ///
+  /// Arguments:
+  /// - `data` is the initial value of the [Observer] data that will be
+  /// compared to the first [DataSubject] notification's data. It can be
+  /// assigned to; be sure that the `comparer` [Function] properly accounts for
+  /// same reference instances.
+  /// - `updater` takes the `data` members of the [DataObserver] and the
+  /// notifying [Subject] to respond to the notification.
+  /// - `comparer` is a [Function] that returns a `bool` by comparing the
+  /// `data` members of the [DataObserver] and [DataSubject] notification in
+  /// order to determine whether to call the `updater` [Function].
   DataObserver({
-    required T data,
-    required _ObserverUpdate<T> updater,
-    _ObserverComparison<T, U>? comparer,
-    _ObserverAssignation<T, U>? assigner,
-  })  : _hasChanged = false,
-        super(
-          data: data,
-          updater: updater,
-          comparer: comparer ?? DataObserver.compareTrue,
-          assigner: assigner ?? DataObserver.assignNone,
-        );
+    required final this.data,
+    required final this.updater,
+    final ObserverComparison<T, U>? comparer,
+  }) : comparer = comparer ?? ((_, __) => true);
 
-  /// Indicates whether there was a relevant change in data as determined by
-  /// the `comparer` [Function] instance when this [DataObserver] last
-  /// received a notification.
-  bool get hasChanged => _hasChanged;
-
-  /// Receives a notification from the argument [Subject] and if the `compare`
-  /// [Function] returns `true`, it sets an internal flag marking the
-  /// [DataObserver] as changed. When a [DataObserver] is marked as changed, a
-  /// subsequent call to the `update()` method will execute `updater(data)` and
-  /// return its [Status].
+  /// Receives a notification from the argument [Subject] and if the `comparer`
+  /// [Function] returns `true`, the [DataUpdater] forwards `data` and the
+  /// `data` of the notifying [Subject] into a call to its `updater` [Function].
   @override
   void receive(DataSubject<U> subject) {
-    if (_hasChanged = comparer(data, subject.data)) {
-      assigner(data, subject.data);
+    if (comparer(data, subject.data)) {
+      updater(data, subject.data);
     }
-  }
-
-  /// Marks the [DataObserver] as unchanged.
-  @override
-  void reset() {
-    _hasChanged = false;
-  }
-
-  /// Checks if the [DataObserver] is marked as changed and updates it using
-  /// the specified `updater` with the `data` received from the latest
-  /// notification.
-  @override
-  Status update() {
-    if (_hasChanged) {
-      _hasChanged = false;
-      return updater(data);
-    }
-
-    return Status.failure;
   }
 }
 
 /// Convenience alias for a [DataObserver] that operates and receives the same
 /// data type.
 typedef SingleDataObserver<T> = DataObserver<T, T>;
-
-bool _compareTrue<T, U>(T _, U __) => true;
-void _assignNone<T, U>(T _, U __) {}

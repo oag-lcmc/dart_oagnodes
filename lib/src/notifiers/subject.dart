@@ -61,8 +61,7 @@ abstract class Subject extends Node {
 }
 
 /// A [DataSubject] has some `data` that can be passed along to [DataObserver]
-/// types that are subscribed to the [DataSubject]. The type argument of the
-/// parameter type `T` must be have reference semantics.
+/// types that are subscribed to the [DataSubject].
 class DataSubject<T> extends Subject {
   final T data;
 

@@ -24,8 +24,8 @@ class StateMachine<TEnum> extends _StateMachineBase {
   /// Defines the behavior of a state through [Node] instances.
   ///
   /// - `state` is the state being defined.
-  /// - `update` is a [Node] instance that is updated every time the state machine
-  /// is updated.
+  /// - `update` is a [Node] instance that is updated every time the state
+  /// machine is updated.
   /// - `enter` is a [Node] instance that is updated once when the state is
   /// first entered.
   /// - `exit` is a [Node] instance that is updated once when the state is first

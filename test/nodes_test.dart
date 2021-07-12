@@ -284,10 +284,9 @@ void main() {
         print('notifier counter.value = ${otherCounter.value}');
         return counter.value != otherCounter.value;
       },
-      assigner: (lhs, rhs) => lhs.value = rhs.value,
-      updater: (counter) {
+      updater: (lhs, rhs) {
+        lhs.value = rhs.value;
         print('updated ${counter.runtimeType}: ${counter.value}');
-        return Status.success;
       },
     );
 
@@ -312,6 +311,7 @@ void main() {
           print('ENTER ${CounterState.add} @ counter = ${counter.value}')),
       exit: makeClosure(
           () => print('EXIT ${CounterState.add} @ counter = ${counter.value}')),
+      isPartial: true,
     );
 
     sm.define(
@@ -321,6 +321,7 @@ void main() {
           print('ENTER ${CounterState.subtract} @ counter = ${counter.value}')),
       exit: makeClosure(() =>
           print('EXIT ${CounterState.subtract} @ counter = ${counter.value}')),
+      isPartial: true,
     );
 
     sm.transition(

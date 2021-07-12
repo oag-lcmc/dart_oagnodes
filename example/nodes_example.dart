@@ -2,8 +2,8 @@ import 'dart:math';
 import 'package:oagnodes/oagnodes.dart';
 
 void main() {
-  subjectAutoDataObserverExample();
-  // subjectDataObserverExample();
+  subjectDataObserverExample1();
+  // subjectDataObserverExample2();
   // evaluatorExample();
   // dataNodeExample();
   // closureExample();
@@ -18,16 +18,13 @@ class IntReference {
   IntReference(this.value);
 }
 
-/// Increments a [IntReference] by some value.
+/// Increments a [IntReference] by the `step` value.
 class IncrementIntReference extends DataNode<IntReference> {
   final int step;
-
   IncrementIntReference(this.step, IntReference data) : super(data);
 
   @override
   Status update() {
-    // increment the int value stored by the IntReference instance by one.
-    print('increment by $step');
     data.value += step;
     return Status.success;
   }
@@ -36,6 +33,9 @@ class IncrementIntReference extends DataNode<IntReference> {
 /// Two state machine states
 enum State { add, subtract }
 
+/// Define a state machine that increments to a number
+/// divisible by 7 and then subtracts until the number is
+/// less than < -17
 StateMachine<State> makeIncrementStateMachine() {
   final random = Random();
 
@@ -85,71 +85,60 @@ StateMachine<State> makeIncrementStateMachine() {
   return stateMachine;
 }
 
-class DetectStateMachineTransition<TEnum>
-    extends DataNode<StateMachine<TEnum>> {
-  TEnum _previous;
-
-  DetectStateMachineTransition(StateMachine<TEnum> data)
-      : _previous = data.current,
-        super(data);
-
-  @override
-  Status update() {
-    final current = data.current;
-    data.update();
-    if (_previous != current) {
-      _previous = current;
-      return Status.success;
-    }
-
-    return Status.failure;
-  }
-}
-
 class UpdateStateMachine<TEnum> extends DataNode<StateMachine<TEnum>> {
   UpdateStateMachine(StateMachine<TEnum> data) : super(data);
 
   @override
-  Status update() {
-    final status = data.update();
-    print('updated machine: ${status.toString()}');
-    return status;
-  }
+  Status update() => data.update();
 }
 
-void subjectAutoDataObserverExample() {
+void subjectDataObserverExample1() {
   final machine = makeIncrementStateMachine();
 
+  // the subject notifies its observer every time the state
+  // machine is updated
   final subject = DataSubject(
     UpdateStateMachine(machine),
-    // notify observers on Status.success and Status.running
+    // notify observers when the state machine returns
+    // Status.success or Status.running
     notifications: [Status.success, Status.running],
   );
 
-  // this is basically a while loop
-  final observer = SingleAutoDataObserver<StateMachine<State>>(
-    data: machine,
-    // stops updating on this comparison condition
-    comparer: (machine, _) => machine.current != State.subtract,
-    updater: (data) => subject.update(),
-  );
-
-  final otherObserver = SingleAutoDataObserver<StateMachine<State>>(
-    data: machine,
-    comparer: (_, __) => true,
-    updater: (data) {
-      print('other observer');
-      return Status.success;
+  // increments its data any time it receives a notification
+  // from the observed subject.
+  final countObserver = DataObserver<IntReference, StateMachine<State>>(
+    data: IntReference(0),
+    updater: (data, otherData) {
+      print('counter: ${++data.value} @ ${otherData.current.toString()}');
     },
   );
 
+  // any time this observer is notified, it updates its
+  // notifying subject if its state has not changed;
+  // this is similar to a white loop
+  final observer = SingleDataObserver<StateMachine<State>>(
+    data: machine,
+    // will only request a subject update if the state
+    // is not the subtract state
+    comparer: (machine, _) => machine.current != State.subtract,
+    updater: (data, otherData) => subject.update(),
+  );
+
+  // the count observer subscribes first
+  subject.subscribe(countObserver);
+
+  // the subject updating observer subscribes second because
+  // it calls the subject's update method until it switches
+  // states; by calling that update method every time, only the
+  // first observer is updated, so this is placed last in order
+  // to ensure that all observers are first notified before the
+  // subject is updated again
   subject.subscribe(observer);
-  subject.subscribe(otherObserver);
 
   subject.update();
 }
 
-void subjectDataObserverExample() {
+void subjectDataObserverExample2() {
   // data to be observed; int reference starting at 0
   final ref = IntReference(0);
 
@@ -169,30 +158,19 @@ void subjectDataObserverExample() {
     // trigger assignment when a.value != b.value
     // a.value is the the observer's local data
     // b.value is the subject's local data
-    comparer: (a, b) => a.value != b.value,
+    comparer: (data, subjectData) => data.value != subjectData.value,
     // assignment mechanics:
     // copy the value of b.value into a.value
-    assigner: (a, b) {
-      print('a.value = ${a.value}, b.value = ${b.value}');
-      a.value = b.value;
-    },
-    // updating mechanics:
     // print out the value of the observer's value
-    updater: (data) {
+    updater: (data, subjectData) {
+      data.value = subjectData.value;
       print('data value is ${data.value}');
-      return Status.success;
     },
   );
 
   // observer subscribes to notifications of subject
   subject.subscribe(observer);
 
-  // observer has not changed because it has not received
-  // a notification from the subject is subscibed to
-  assert(!observer.hasChanged);
-
-  // will not do anything because observer.hasChanged == false
-  assert(observer.update() == Status.failure);
   assert(observer.data.value != subject.data.value);
 
   // emits notification to observers if the contained node
@@ -202,15 +180,6 @@ void subjectDataObserverExample() {
   // the comparer verified that ref.value != observer.data.value
   // and then assigned the subject's data to the observer's data
   assert(ref.value == observer.data.value);
-
-  // the subject emitted an a notification, the observer is now
-  // marked as changed because the comparer returned true
-  // it has also been assigned the newly updated value
-  assert(observer.hasChanged);
-
-  // the call to its update() method will perform an update
-  // on the assigned value; this observer simply prints the value
-  assert(observer.update() == Status.success);
 }
 
 void evaluatorExample() {

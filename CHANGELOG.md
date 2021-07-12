@@ -1,10 +1,11 @@
 0.0.4
 
-- Removed generic project example; will add real world examples later
 - Removed unused dart:ffi import
-- Improved examples of DataObserver and AutoDataObserver
-- Simplified interface of DataObserver and AutoDataObserver
-- BREAKING CHANGE: replaced named optional parameter 'action' as a formal
+- Removed generic project example; more realistic examples later. See type
+specific examples in documentation for usage
+- Improved example of DataObserver; simplified interface, it is no longer a Node
+ type, but can/might be wrapped into a type that does extend Node later
+- BREAKING CHANGE: replaced named optional parameter 'action' to a
 required positional parameter in the makeClosure() function
 
 0.0.3
