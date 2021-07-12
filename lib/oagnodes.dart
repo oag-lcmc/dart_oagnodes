@@ -29,5 +29,4 @@ part 'src/notifiers/data_observer.dart';
 // state machines
 part 'src/states/state_machine_base.dart';
 part 'src/states/state_machine.dart';
-part 'src/states/state_notification_machine.dart';
 part 'src/states/state.dart';

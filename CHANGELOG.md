@@ -1,3 +1,7 @@
+0.0.5
+
+- Removed empty class declaration
+
 0.0.4
 
 - Removed unused dart:ffi import
