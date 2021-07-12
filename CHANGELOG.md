@@ -1,3 +1,9 @@
+0.0.6
+
+- Added FutureSubject class to provide Future based notifications nodes; this
+interface will most likely be changed
+- Modified DataSubject interface to accomodate FutureSubject
+
 0.0.5
 
 - Removed empty class declaration

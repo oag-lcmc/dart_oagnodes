@@ -2,7 +2,8 @@ import 'dart:math';
 import 'package:oagnodes/oagnodes.dart';
 
 void main() {
-  subjectDataObserverExample1();
+  futureSubjectExample();
+  // subjectDataObserverExample1();
   // subjectDataObserverExample2();
   // evaluatorExample();
   // dataNodeExample();
@@ -10,6 +11,31 @@ void main() {
   // identityExample();
   // selectorExample();
   // sequenceExample();
+}
+
+void futureSubjectExample() {
+  final futureSubject = FutureDataSubject<IntReference>(
+    valueDefault: IncrementIntReference(2, IntReference(-1)),
+    future: () async {
+      await Future<void>.delayed(const Duration(seconds: 2));
+      return IntReference(0);
+    },
+  );
+
+  final observer = SingleDataObserver<IntReference>(
+    data: IntReference(0),
+    updater: (data, subjectData) {
+      print('notified by future subject: ${subjectData.value}');
+    },
+  );
+
+  futureSubject.subscribe(observer);
+
+  if (futureSubject.update() != Status.running) {
+    futureSubject.reset();
+  }
+
+  futureSubject.update();
 }
 
 // A reference to an int
@@ -97,7 +123,7 @@ void subjectDataObserverExample1() {
 
   // the subject notifies its observer every time the state
   // machine is updated
-  final subject = DataSubject(
+  final subject = DataSubject<StateMachine<State>>(
     UpdateStateMachine(machine),
     // notify observers when the state machine returns
     // Status.success or Status.running

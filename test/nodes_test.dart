@@ -275,7 +275,9 @@ void main() {
   group('Notifier node test', () {
     final counter = Counter(0);
     final incrementer = RandomIncrementer(upperBound: 3);
-    final subject = DataSubject(IncrementCounter(counter, incrementer));
+    final subject = DataSubject<Counter>(
+      IncrementCounter(counter, incrementer),
+    );
 
     final observerA = SingleDataObserver<Counter>(
       data: Counter(0),

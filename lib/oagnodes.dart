@@ -23,6 +23,7 @@ part 'src/decorators/not.dart';
 
 // notifiers
 part 'src/notifiers/subject.dart';
+part 'src/notifiers/future_subject.dart';
 part 'src/notifiers/observer.dart';
 part 'src/notifiers/data_observer.dart';
 

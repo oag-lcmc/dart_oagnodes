@@ -13,9 +13,10 @@ abstract class Subject extends Node {
   final List<Observer> _observers;
 
   Subject(
-    this._subject, {
+    Node subject, {
     final List<Status> notifyStatus = const [Status.success],
-  })  : _notifications = notifyStatus.reduce((a, b) => Status._or(a, b)),
+  })  : _subject = subject,
+        _notifications = notifyStatus.reduce((a, b) => Status._or(a, b)),
         _observers = List.empty(growable: true);
 
   /// Add an [Observer] to the notification list.
@@ -50,6 +51,7 @@ abstract class Subject extends Node {
   /// resulting [Status] is returned by this method in all scenarios.
   @override
   Status update() {
+    print('subject update');
     final status = _subject.update();
 
     if (_notifications._value & status._value > 0) {
@@ -63,7 +65,7 @@ abstract class Subject extends Node {
 /// A [DataSubject] has some `data` that can be passed along to [DataObserver]
 /// types that are subscribed to the [DataSubject].
 class DataSubject<T> extends Subject {
-  final T data;
+  T data;
 
   /// Construct a [DataSubject] with some `data`. The `data` is accessible
   /// because concrete this instance passes itself to a matching [DataObserver]
