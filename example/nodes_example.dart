@@ -13,31 +13,6 @@ void main() {
   // sequenceExample();
 }
 
-void futureSubjectExample() {
-  final futureSubject = FutureDataSubject<IntReference>(
-    valueDefault: IncrementIntReference(2, IntReference(-1)),
-    future: () async {
-      await Future<void>.delayed(const Duration(seconds: 2));
-      return IntReference(0);
-    },
-  );
-
-  final observer = SingleDataObserver<IntReference>(
-    data: IntReference(0),
-    updater: (data, subjectData) {
-      print('notified by future subject: ${subjectData.value}');
-    },
-  );
-
-  futureSubject.subscribe(observer);
-
-  if (futureSubject.update() != Status.running) {
-    futureSubject.reset();
-  }
-
-  futureSubject.update();
-}
-
 // A reference to an int
 class IntReference {
   int value;
@@ -54,6 +29,35 @@ class IncrementIntReference extends DataNode<IntReference> {
     data.value += step;
     return Status.success;
   }
+}
+
+void futureSubjectExample() {
+  final random = Random();
+  final futureSubject = FutureSubject<IntReference>(
+    // simulated ansynchronous operation returning data
+    future: () async {
+      await Future<void>.delayed(const Duration(seconds: 2));
+      return IntReference(random.nextInt(3));
+    },
+  );
+
+  // this observer will keep requesting new data from
+  // its subscribed subject until it meets the > 10 criteria
+  final observer = SingleDataObserver<IntReference>(
+    data: IntReference(0),
+    updater: (data, newData) {
+      print('newData: ${newData.value}');
+      data.value += newData.value;
+      if (data.value < 10) {
+        futureSubject.reset();
+        futureSubject.update();
+        print('data: ${data.value}');
+      }
+    },
+  );
+
+  futureSubject.subscribe(observer);
+  futureSubject.update();
 }
 
 /// Two state machine states
@@ -111,11 +115,13 @@ StateMachine<State> makeIncrementStateMachine() {
   return stateMachine;
 }
 
-class UpdateStateMachine<TEnum> extends DataNode<StateMachine<TEnum>> {
-  UpdateStateMachine(StateMachine<TEnum> data) : super(data);
+class UpdateStateMachine extends DataSubject<StateMachine<State>> {
+  UpdateStateMachine(StateMachine<State> data) : super(data, );
 
   @override
-  Status update() => data.update();
+  Status update() {
+    
+  }
 }
 
 void subjectDataObserverExample1() {
@@ -124,7 +130,8 @@ void subjectDataObserverExample1() {
   // the subject notifies its observer every time the state
   // machine is updated
   final subject = DataSubject<StateMachine<State>>(
-    UpdateStateMachine(machine),
+    machine,
+    builder: (data) => UpdateStateMachine(data),
     // notify observers when the state machine returns
     // Status.success or Status.running
     notifications: [Status.success, Status.running],
@@ -168,12 +175,13 @@ void subjectDataObserverExample2() {
   // data to be observed; int reference starting at 0
   final ref = IntReference(0);
 
-  // add 1 to the value of the IntReference
-  final addOneToIntRef = IncrementIntReference(1, ref);
-
   // subject.update() will call addToIntRef.update() and notify its
   // subscribed observers if addToIntRef.update() returns Status.success
-  final subject = DataSubject(addOneToIntRef);
+  final subject = DataSubject(
+    ref,
+    // add 1 to the value of the IntReference
+    builder: (IntReference data) => IncrementIntReference(1, data),
+  );
 
   // observe changes to an IntRef and compare and assign from an IntRef
   final observer = SingleDataObserver<IntReference>(

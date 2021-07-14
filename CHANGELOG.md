@@ -1,3 +1,7 @@
+0.0.7
+
+- BREAKING CHANGE: new subject/observer interfaces
+
 0.0.6
 
 - Added FutureSubject class to provide Future based notifications nodes; this

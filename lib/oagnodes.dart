@@ -23,9 +23,10 @@ part 'src/decorators/not.dart';
 
 // notifiers
 part 'src/notifiers/subject.dart';
-part 'src/notifiers/future_subject.dart';
 part 'src/notifiers/observer.dart';
+part 'src/notifiers/data_subject.dart';
 part 'src/notifiers/data_observer.dart';
+part 'src/notifiers/future_subject.dart';
 
 // state machines
 part 'src/states/state_machine_base.dart';

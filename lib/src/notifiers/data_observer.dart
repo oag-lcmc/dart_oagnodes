@@ -3,10 +3,10 @@ part of nodes;
 typedef ObserverComparison<T, U> = bool Function(T, U);
 typedef ObserverUpdate<T, U> = void Function(T, U);
 
-/// The [DataObserver] class is can subscribe to a [Subject] in order to be
-/// notified by that [Subject] when its `update()` method is called. The
+/// The [DataObserver] class is can subscribe to a [_SubjectBase] in order to be
+/// notified by that [_SubjectBase] when its `update()` method is called. The
 /// [DataObserver] will receive a notification along with a reference to the
-/// [Subject] that initiated the notification.
+/// [_SubjectBase] that initiated the notification.
 ///
 /// /// The [DataObserver] is able to receive notifications from a [DataSubject]. It
 /// must call the `update()` method itself or through a proxy in order to call
@@ -153,7 +153,7 @@ class DataObserver<T, U> extends Observer {
   /// the `data` it receives from a [DataSubject] notification.
   final ObserverComparison<T, U> comparer;
 
-  /// Constructs a [DataObserver] that can subscribe to some [Subject].
+  /// Constructs a [DataObserver] that can subscribe to some [_SubjectBase].
   ///
   /// Arguments:
   /// - `data` is the initial value of the [Observer] data that will be
@@ -161,7 +161,7 @@ class DataObserver<T, U> extends Observer {
   /// assigned to; be sure that the `comparer` [Function] properly accounts for
   /// same reference instances.
   /// - `updater` takes the `data` members of the [DataObserver] and the
-  /// notifying [Subject] to respond to the notification.
+  /// notifying [_SubjectBase] to respond to the notification.
   /// - `comparer` is a [Function] that returns a `bool` by comparing the
   /// `data` members of the [DataObserver] and [DataSubject] notification in
   /// order to determine whether to call the `updater` [Function].
@@ -171,9 +171,9 @@ class DataObserver<T, U> extends Observer {
     final ObserverComparison<T, U>? comparer,
   }) : comparer = comparer ?? ((_, __) => true);
 
-  /// Receives a notification from the argument [Subject] and if the `comparer`
+  /// Receives a notification from the argument [_SubjectBase] and if the `comparer`
   /// [Function] returns `true`, the [DataUpdater] forwards `data` and the
-  /// `data` of the notifying [Subject] into a call to its `updater` [Function].
+  /// `data` of the notifying [_SubjectBase] into a call to its `updater` [Function].
   @override
   void receive(DataSubject<U> subject) {
     if (comparer(data, subject.data)) {

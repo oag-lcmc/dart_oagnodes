@@ -276,7 +276,8 @@ void main() {
     final counter = Counter(0);
     final incrementer = RandomIncrementer(upperBound: 3);
     final subject = DataSubject<Counter>(
-      IncrementCounter(counter, incrementer),
+      counter,
+      builder: (data) => IncrementCounter(data, incrementer),
     );
 
     final observerA = SingleDataObserver<Counter>(
@@ -295,8 +296,10 @@ void main() {
     subject.subscribe(observerA);
 
     test('Subject tests', () {
+      expect(identical(counter, observerA.data), isFalse);
       expect(counter.value == observerA.data.value, isTrue);
       subject.update();
+      expect(identical(counter, observerA.data), isFalse);
       expect(counter.value == observerA.data.value, isTrue);
     });
   });
