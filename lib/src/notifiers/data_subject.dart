@@ -1,7 +1,7 @@
 part of nodes;
 
 /// Abstract base class for all [DataSubject] types. It stores data of type
-/// argument `T`. Concrete [Observer] instances can be passed a [DataSubject] in
+/// argument `T`. Concrete [_ObserverBase] instances can be passed a [DataSubject] in
 /// order to observe, modify and make requests to the [DataSubject] and its
 /// `data`.
 abstract class DataSubject<T> extends Subject {

@@ -2,8 +2,8 @@ import 'dart:math';
 import 'package:oagnodes/oagnodes.dart';
 
 void main() {
-  futureSubjectExample();
-  // subjectDataObserverExample1();
+  //futureSubjectExample();
+  subjectDataObserverExample1();
   // subjectDataObserverExample2();
   // evaluatorExample();
   // dataNodeExample();
@@ -26,11 +26,13 @@ class IncrementIntReference extends DataNode<IntReference> {
 
   @override
   Status update() {
+    print('increment by $step');
     data.value += step;
     return Status.success;
   }
 }
 
+/*
 void futureSubjectExample() {
   final random = Random();
   final futureSubject = FutureSubject<IntReference>(
@@ -59,7 +61,7 @@ void futureSubjectExample() {
   futureSubject.subscribe(observer);
   futureSubject.update();
 }
-
+*/
 /// Two state machine states
 enum State { add, subtract }
 
@@ -115,50 +117,33 @@ StateMachine<State> makeIncrementStateMachine() {
   return stateMachine;
 }
 
-class UpdateStateMachine extends DataSubject<StateMachine<State>> {
-  UpdateStateMachine(StateMachine<State> data) : super(data, );
-
-  @override
-  Status update() {
-    
-  }
-}
-
 void subjectDataObserverExample1() {
   final machine = makeIncrementStateMachine();
 
-  // the subject notifies its observer every time the state
-  // machine is updated
-  final subject = DataSubject<StateMachine<State>>(
-    machine,
-    builder: (data) => UpdateStateMachine(data),
+  var state = machine.current;
+
+  final subject = Subject(
+    // the subject updates its notifier and tells its observer
+    // state machine changes state
+    Closure(() {
+      if (machine.current != state) {
+        state = machine.current;
+        return Status.success;
+      } else {
+        return Status.failure;
+      }
+    }),
     // notify observers when the state machine returns
     // Status.success or Status.running
     notifications: [Status.success, Status.running],
   );
 
-  // increments its data any time it receives a notification
-  // from the observed subject.
-  final countObserver = DataObserver<IntReference, StateMachine<State>>(
-    data: IntReference(0),
-    updater: (data, otherData) {
-      print('counter: ${++data.value} @ ${otherData.current.toString()}');
+  // print the name of the new state on notification
+  final observer = Observer(
+    handler: (Subject subject) {
+      print('state switched to ${machine.current.toString()}');
     },
   );
-
-  // any time this observer is notified, it updates its
-  // notifying subject if its state has not changed;
-  // this is similar to a white loop
-  final observer = SingleDataObserver<StateMachine<State>>(
-    data: machine,
-    // will only request a subject update if the state
-    // is not the subtract state
-    comparer: (machine, _) => machine.current != State.subtract,
-    updater: (data, otherData) => subject.update(),
-  );
-
-  // the count observer subscribes first
-  subject.subscribe(countObserver);
 
   // the subject updating observer subscribes second because
   // it calls the subject's update method until it switches
@@ -171,16 +156,17 @@ void subjectDataObserverExample1() {
   subject.update();
 }
 
+/*
 void subjectDataObserverExample2() {
   // data to be observed; int reference starting at 0
   final ref = IntReference(0);
 
   // subject.update() will call addToIntRef.update() and notify its
   // subscribed observers if addToIntRef.update() returns Status.success
-  final subject = DataSubject(
-    ref,
-    // add 1 to the value of the IntReference
-    builder: (IntReference data) => IncrementIntReference(1, data),
+  final subject = Subject(
+    Closure(() {
+      return ++ref.value % 2 == 0 ? Status.success : Status.failure;
+    }),
   );
 
   // observe changes to an IntRef and compare and assign from an IntRef
@@ -215,7 +201,7 @@ void subjectDataObserverExample2() {
   // and then assigned the subject's data to the observer's data
   assert(ref.value == observer.data.value);
 }
-
+*/
 void evaluatorExample() {
   final random = Random();
 

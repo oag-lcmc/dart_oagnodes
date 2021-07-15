@@ -141,7 +141,7 @@ typedef ObserverUpdate<T, U> = void Function(T, U);
 ///   subject.update();
 /// }
 /// ```
-class DataObserver<T, U> extends Observer {
+class DataObserver<T, U> extends _ObserverBase {
   /// The previous data to be compared to the new data from a notification.
   final T data;
 
@@ -156,7 +156,7 @@ class DataObserver<T, U> extends Observer {
   /// Constructs a [DataObserver] that can subscribe to some [_SubjectBase].
   ///
   /// Arguments:
-  /// - `data` is the initial value of the [Observer] data that will be
+  /// - `data` is the initial value of the [_ObserverBase] data that will be
   /// compared to the first [DataSubject] notification's data. It can be
   /// assigned to; be sure that the `comparer` [Function] properly accounts for
   /// same reference instances.

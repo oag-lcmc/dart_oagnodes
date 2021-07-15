@@ -1,7 +1,7 @@
 part of nodes;
 
 typedef FutureUpdate<T> = Future<T> Function();
-
+/*
 /// A [FutureSubject] takes a [Function] returning a [Future] of argument type
 /// `T`. The [FutureSubject] will call the argument future and notify listeners
 /// once the future is complete.
@@ -97,3 +97,4 @@ class FutureDataSubject<T> extends FutureSubject<T> {
     return Status.running;
   }
 }
+*/

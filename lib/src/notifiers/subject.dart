@@ -1,25 +1,25 @@
 part of nodes;
 
-/// Abstract base class for all [_SubjectBase] types. The [_SubjectBase] passes itself
-/// to each subscribed [Observer] in the `notify()` method so that concrete
-/// [Observer] types can handle multiple subscriptions.
+/// Abstract base class for all [_SubjectBase] types. The [_SubjectBase] passes
+/// itself to each subscribed [_ObserverBase] in the `notify()` method so that
+/// concrete [_ObserverBase] types can handle multiple subscriptions.
 abstract class _SubjectBase extends Node {
-  final List<Observer> _observers;
+  final List<_ObserverBase> _observers;
 
   /// Base constructor for [_SubjectBase] types.
   _SubjectBase() : _observers = List.empty(growable: true);
 
-  /// Add an [Observer] to the notification list.
-  void subscribe(Observer observer) {
+  /// Add an [_ObserverBase] to the notification list.
+  void subscribe(_ObserverBase observer) {
     _observers.add(observer);
   }
 
-  /// Remove an [Observer] from the notification list.
-  void unsubscribe(Observer observer) {
+  /// Remove an [_ObserverBase] from the notification list.
+  void unsubscribe(_ObserverBase observer) {
     _observers.remove(observer);
   }
 
-  /// Notifies each [Observer] by calling their respective `receive(subject)`
+  /// Notifies each [_ObserverBase] by calling their respective `receive(subject)`
   /// method and passing `this` as the [_SubjectBase] of the notification.
   void notify() {
     for (var i = 0; i != _observers.length; ++i) {
@@ -28,19 +28,35 @@ abstract class _SubjectBase extends Node {
   }
 }
 
-/// The [Subject] class has a [Status] list and a [Node]. A call to the
-/// `update()` method will
+/// The [Subject] class has a [Status] list and a notifier [Node]. The
+/// notification [Node] is updated and its [Status] is compared to the list of
+/// notification status. If the notification status is part of the list of
+/// status, the [Subject] will notify all subscribed [_ObserverBase].
 class Subject extends _SubjectBase {
-  final Node _node;
+  final Node _notifier;
+  final Status _notifications;
 
-  Subject(this._node);
+  Subject(
+    this._notifier, {
+    List<Status> notifications = const [Status.success],
+  }) : _notifications = notifications.reduce((a, b) {
+          return Status._or(a, b);
+        });
 
-  /// Updates the
+  /// Resets the notification [Node].
+  @override
+  void reset() {
+    _notifier.reset();
+  }
+
+  /// Updates the notification [Node] and if the [Status] it returns is part of
+  /// the [Status] notification list, the [Subject] notifies all subscribed
+  /// [_ObserverBase] instances.
   @override
   Status update() {
-    final status = _node.update();
+    final status = _notifier.update();
 
-    if (status == Status.success) {
+    if (status._value & _notifications._value > 0) {
       notify();
     }
 
