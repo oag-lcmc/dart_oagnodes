@@ -3,7 +3,7 @@ import 'package:oagnodes/oagnodes.dart';
 
 void main() {
   //futureSubjectExample();
-  subjectDataObserverExample1();
+  // subjectObserverExample();
   // subjectDataObserverExample2();
   // evaluatorExample();
   // dataNodeExample();
@@ -65,28 +65,58 @@ void futureSubjectExample() {
 /// Two state machine states
 enum State { add, subtract }
 
+class StateMachineSwitchObserver extends DataObserver<> {
+  
+}
+
+void subjectDataObserverExample() {
+
+}
+
 /// Define a state machine that increments to a number
 /// divisible by 7 and then subtracts until the number is
-/// less than < -17
-StateMachine<State> makeIncrementStateMachine() {
-  final random = Random();
+/// less than < -17. A [Subject] that updates the state
+/// machine is returned.
+Subject makeStateMachineSwitchSubject() {
+  final machine = StateMachine(State.values);
 
+  // the current state of the state machine
+  var state = machine.current;
+
+  final subject = Subject(
+    Closure(() {
+      // capture data and update it
+      machine.update();
+
+      // notifier checks if the state machine
+      // has switched states
+      if (machine.current != state) {
+        state = machine.current;
+        // returning Status.success from the notifier
+        // will trigger a notification to observers
+        return Status.success;
+      } else {
+        return Status.failure;
+      }
+    }),
+  );
+
+  final random = Random();
   final ref = IntReference(1);
 
-  final stateMachine = StateMachine(State.values);
-  stateMachine.define(
+  machine.define(
     State.add, // increment by 1, 2 or 3
     update: IncrementIntReference(random.nextInt(3) + 1, ref),
   );
   // subtract state modifies ref value by subtracting 2
-  stateMachine.define(
+  machine.define(
     State.subtract, // decrement by -2 or -1
     update: IncrementIntReference(-random.nextInt(2) - 1, ref),
   );
 
   // transition from add to subtract when
   // ref.value is divisible by 7
-  stateMachine.transition(
+  machine.transition(
     from: State.add,
     to: State.subtract,
     on: Closure(() {
@@ -101,7 +131,7 @@ StateMachine<State> makeIncrementStateMachine() {
 
   // transition from subtract to add when
   // ref.value is less than -17; ref.value < -17
-  stateMachine.transition(
+  machine.transition(
     from: State.subtract,
     to: State.add,
     on: Closure(() {
@@ -114,94 +144,28 @@ StateMachine<State> makeIncrementStateMachine() {
     }),
   );
 
-  return stateMachine;
+  return subject;
 }
 
-void subjectDataObserverExample1() {
-  final machine = makeIncrementStateMachine();
-
-  var state = machine.current;
-
-  final subject = Subject(
-    // the subject updates its notifier and tells its observer
-    // state machine changes state
-    Closure(() {
-      if (machine.current != state) {
-        state = machine.current;
-        return Status.success;
-      } else {
-        return Status.failure;
-      }
-    }),
-    // notify observers when the state machine returns
-    // Status.success or Status.running
-    notifications: [Status.success, Status.running],
-  );
+void subjectObserverExample() {
+  final subject = makeStateMachineSwitchSubject();
 
   // print the name of the new state on notification
   final observer = Observer(
     handler: (Subject subject) {
-      print('state switched to ${machine.current.toString()}');
+      // print a message when a notification is received
+      print('observed notification');
     },
   );
 
-  // the subject updating observer subscribes second because
-  // it calls the subject's update method until it switches
-  // states; by calling that update method every time, only the
-  // first observer is updated, so this is placed last in order
-  // to ensure that all observers are first notified before the
-  // subject is updated again
+  // the observer subscribes to subject notifications
   subject.subscribe(observer);
 
-  subject.update();
+  // update until the subject until it returns Status.success,
+  // this will cause one notification to be sent out
+  while (subject.update() != Status.success) {}
 }
 
-/*
-void subjectDataObserverExample2() {
-  // data to be observed; int reference starting at 0
-  final ref = IntReference(0);
-
-  // subject.update() will call addToIntRef.update() and notify its
-  // subscribed observers if addToIntRef.update() returns Status.success
-  final subject = Subject(
-    Closure(() {
-      return ++ref.value % 2 == 0 ? Status.success : Status.failure;
-    }),
-  );
-
-  // observe changes to an IntRef and compare and assign from an IntRef
-  final observer = SingleDataObserver<IntReference>(
-    // the observer's initial data is another instance of the
-    // the subject's data type IntReference
-    data: IntReference(-1),
-    // comparison mechanics:
-    // trigger assignment when a.value != b.value
-    // a.value is the the observer's local data
-    // b.value is the subject's local data
-    comparer: (data, subjectData) => data.value != subjectData.value,
-    // assignment mechanics:
-    // copy the value of b.value into a.value
-    // print out the value of the observer's value
-    updater: (data, subjectData) {
-      data.value = subjectData.value;
-      print('data value is ${data.value}');
-    },
-  );
-
-  // observer subscribes to notifications of subject
-  subject.subscribe(observer);
-
-  assert(observer.data.value != subject.data.value);
-
-  // emits notification to observers if the contained node
-  // returns Status.success
-  subject.update();
-
-  // the comparer verified that ref.value != observer.data.value
-  // and then assigned the subject's data to the observer's data
-  assert(ref.value == observer.data.value);
-}
-*/
 void evaluatorExample() {
   final random = Random();
 
