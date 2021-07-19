@@ -131,12 +131,12 @@ abstract class _SubjectBase extends Node {
 /// }
 /// ```
 class Subject extends _SubjectBase {
-  final Node notifier;
+  Node notifier;
   final Status notifications;
 
   Subject(
-    this.notifier, {
-    List<Status> notifications = const [Status.success],
+    final this.notifier, {
+    final List<Status> notifications = const [Status.success],
   }) : notifications = notifications.reduce((a, b) {
           return Status._or(a, b);
         });

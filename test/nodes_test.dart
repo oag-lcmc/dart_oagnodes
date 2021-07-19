@@ -274,33 +274,29 @@ void main() {
 
   group('Notifier node test', () {
     final counter = Counter(0);
+    final oldCounter = Counter(0);
+
     final incrementer = RandomIncrementer(upperBound: 3);
-    final subject = DataSubject<Counter>(
-      counter,
-      builder: (data) => IncrementCounter(data, incrementer),
+    final subject = Subject(
+      IncrementCounter(counter, incrementer),
     );
 
-    final observerA = SingleDataObserver<Counter>(
-      data: Counter(0),
-      comparer: (counter, otherCounter) {
-        print('previous counter.value = ${counter.value}');
-        print('notifier counter.value = ${otherCounter.value}');
-        return counter.value != otherCounter.value;
-      },
-      updater: (lhs, rhs) {
-        lhs.value = rhs.value;
-        print('updated ${counter.runtimeType}: ${counter.value}');
+    final observer = Observer(
+      handler: (subject) {
+        if (counter.value != oldCounter.value) {
+          print('updated ${counter.runtimeType}: ${counter.value}');
+          oldCounter.value = counter.value;
+        }
       },
     );
 
-    subject.subscribe(observerA);
+    subject.subscribe(observer);
 
     test('Subject tests', () {
-      expect(identical(counter, observerA.data), isFalse);
-      expect(counter.value == observerA.data.value, isTrue);
+      expect(identical(counter, oldCounter), isFalse);
+      expect(counter.value == oldCounter.value, isTrue);
       subject.update();
-      expect(identical(counter, observerA.data), isFalse);
-      expect(counter.value == observerA.data.value, isTrue);
+      expect(counter.value == oldCounter.value, isTrue);
     });
   });
 

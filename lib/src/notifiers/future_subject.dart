@@ -1,18 +1,26 @@
 part of nodes;
 
-typedef FutureUpdate<T> = Future<T> Function();
-/*
 /// A [FutureSubject] takes a [Function] returning a [Future] of argument type
 /// `T`. The [FutureSubject] will call the argument future and notify listeners
 /// once the future is complete.
-class FutureSubject<T> extends _SubjectBase {
-  /// Placeholder function to run while awaiting the future.
-  static Status _await() => Status.running;
+///
+/// Example:
+///
+/// ```
 
+/// ```
+class FutureSubject<T> extends Subject {
   /// Future to be called by `_updater` before a result has been received.
-  final FutureUpdate<T> _future;
+  final Future<T> Function() _future;
 
-  /// Operation to be called by the `update()` method.
+  /// Builds a [DataNode] when the future completes using the value returned
+  /// by the future.
+  final DataNode<T> Function(T) _builder;
+
+  static final Status Function() _ds = () {
+    return Status.running;
+  };
+
   Status Function() _updater;
 
   /// Constructs a [FutureSubject] instance.
@@ -23,31 +31,24 @@ class FutureSubject<T> extends _SubjectBase {
   /// - `builder` builds a [DataNode] operation constructed from the return
   /// value of the `future`; the [DataNode] will be executed once `future`
   /// terminates.
+  ///
+  /// Note: The `notifications` list only accepts `Status.success` and
+  /// `Status.running`.
   FutureSubject({
     required final Future<T> Function() future,
+    required final DataNode<T> Function(T) builder,
     final List<Status> notifications = const [Status.success],
-  })  : _updater = FutureSubject._await,
-        _future = future {
-    _updater = _begin;
+  })  : assert(!notifications.contains(Status.failure)),
+        _future = future,
+        _builder = builder,
+        _updater = _ds,
+        super(Identity.failure) {
+    _updater = _await;
   }
 
-  /// Switches `_updater` to always return `Status.running` until `_future` is
-  /// complete. Once the callback of `_future` is executed, `_updater` is set
-  /// to the parent [DataSubject] `update()` method which will call its
-  /// [DataNode] `update()` method and compare the resulting [Status] to its
-  /// monitored statuses in order to determine whether to trigger a notification
-  /// to the subscribers of this [FutureSubject].
-  Status _begin() {
+  @override
+  void reset() {
     _updater = _await;
-
-    _future().then((newData) {
-      // switch to the parent update method
-      _updater = super.update;
-      // trigger an update in this class to evaluate the parent update
-      update();
-    });
-
-    return Status.running;
   }
 
   /// Calls the future and once a result is available the contained data is
@@ -57,44 +58,26 @@ class FutureSubject<T> extends _SubjectBase {
   Status update() {
     return _updater();
   }
-}
 
-class FutureDataSubject<T> extends FutureSubject<T> {
-  T? data;
-
-  FutureDataSubject({required final FutureUpdate<T> future})
-      : super(future: future);
-
-  /// Indicates whether the [FutureDataSubject] is complete
-  bool get hasResult => data != null;
-
-  /// Resets the subject [Node] and the state of the [FutureSubject] so that
-  /// it calls its future in the next call to the `update()` method.
-  @override
-  void reset() {
-    _updater = _begin;
-    super.reset();
-  }
-
-  /// Switches `_updater` to always return `Status.running` until `_future` is
-  /// complete. Once the callback of `_future` is executed, `_updater` is set
-  /// to the parent [DataSubject] `update()` method which will call its
-  /// [DataNode] `update()` method and compare the resulting [Status] to its
-  /// monitored statuses in order to determine whether to trigger a notification
-  /// to the subscribers of this [FutureSubject].
-  @override
-  Status _begin() {
-    _updater = _await;
-
-    _future().then((newData) {
-      data = newData;
-      // switch to the parent update method
-      _updater = super.update;
-      // trigger an update in this class to evaluate the parent update
+  /// Calls the future. Builds a [DataNode] using the result of
+  /// the future
+  Status _await() {
+    _future().then((T futureData) {
+      notifier = _builder(futureData);
+      _updater = _update;
       update();
     });
 
-    return Status.running;
+    return Status.failure;
+  }
+
+  Status _update() {
+    final status = notifier.update();
+
+    if (status._value & notifications._value > 0) {
+      notify();
+    }
+
+    return status;
   }
 }
-*/

@@ -2,9 +2,9 @@ import 'dart:math';
 import 'package:oagnodes/oagnodes.dart';
 
 void main() {
-  //futureSubjectExample();
+  futureSubjectExample();
+  // dataSubjectObserverExample();
   // subjectObserverExample();
-  // subjectDataObserverExample2();
   // evaluatorExample();
   // dataNodeExample();
   // closureExample();
@@ -30,6 +30,60 @@ class IncrementIntReference extends DataNode<IntReference> {
     data.value += step;
     return Status.success;
   }
+}
+
+void futureSubjectExample() {
+  // keep a scopy reference for testing purposes
+  final intReference = IntReference(0);
+
+  final futureSubject = FutureSubject<IntReference>(
+    future: () async {
+      // simulate some future based operation
+      print('calling future');
+      await Future<void>.delayed(const Duration(seconds: 2));
+      // return a value from the future
+      return intReference;
+    },
+    // builds a DataNode using the result of the future
+    builder: (data) {
+      return IncrementIntReference(5, data);
+    },
+  );
+
+  final observer = Observer(handler: (subject) {
+    print('notified by future subject: ${intReference.value}');
+  });
+
+  futureSubject.subscribe(observer);
+
+  // calls the future function and notifies the
+  // observer using the built DataNode when the
+  // future completes
+  futureSubject.update();
+}
+
+void dataSubjectObserverExample() {
+  // subject data is an int reference
+  final subjectData = IntReference(0);
+
+  // subject notifier simply increments its int reference
+  // and returns Status.success
+  final incrementer = IncrementIntReference(2, subjectData);
+
+  // the notifier will succeed on every attempt because it
+  // always returns Status.success
+  final dataSubject = DataSubject(incrementer);
+
+  // the observer knows it will subscribe to a data subject;
+  // its handler will therefore use a DataSubject parameter
+  final observer = Observer(handler: (DataSubject<IntReference> subject) {
+    print('received notification with data: ${subject.data.value}');
+  });
+
+  dataSubject.subscribe(observer);
+
+  // update the data subject, the observer receives notification
+  dataSubject.update();
 }
 
 /*
@@ -64,14 +118,6 @@ void futureSubjectExample() {
 */
 /// Two state machine states
 enum State { add, subtract }
-
-class StateMachineSwitchObserver extends DataObserver<> {
-  
-}
-
-void subjectDataObserverExample() {
-
-}
 
 /// Define a state machine that increments to a number
 /// divisible by 7 and then subtracts until the number is
