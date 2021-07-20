@@ -1,6 +1,7 @@
 0.0.7
 
-- BREAKING CHANGE: new subject/observer interfaces
+- BREAKING CHANGE: new Subject, DataSubject, FutureSubject & Observer interfaces
+and examples
 
 0.0.6
 
