@@ -92,7 +92,9 @@ class _State extends Node {
     }
   }
 
-  void add(final _Transition transition) => _transitional.add(transition);
+  void add(final TransitionGroup group, final _Transition transition) {
+    _transitional.add(group, transition);
+  }
 
   @override
   void reset() => _sequence.reset();
@@ -129,19 +131,59 @@ class _Transition {
 /// the decorated [Node] returns a [Status] different from `Status.running`.
 class _Transitional extends Decorator {
   final _StateMachineBase _machine;
-  final List<_Transition> _transitions;
+  final List<_Transition> _beforeTransitions;
+  final List<_Transition> _afterTransitions;
 
-  _Transitional(this._machine, Node node)
-      : _transitions = List.empty(growable: true),
+  _Transitional(final this._machine, final Node node)
+      : _beforeTransitions = List.empty(growable: true),
+        _afterTransitions = List.empty(growable: true),
         super(node);
 
-  void add(final _Transition transition) => _transitions.add(transition);
+  void add(final TransitionGroup group, final _Transition transition) {
+    switch (group) {
+      case TransitionGroup.before:
+        _beforeTransitions.add(transition);
+        break;
+      case TransitionGroup.after:
+        _afterTransitions.add(transition);
+        break;
+      case TransitionGroup.beforeAndAfter:
+        _beforeTransitions.add(transition);
+        _afterTransitions.add(transition);
+        break;
+    }
+  }
 
   @override
   Status update() {
-    for (var i = 0; i != _transitions.length; ++i) {
+    // check transitions that should occur before the state node update
+    if (_handleTransitions(_beforeTransitions)) {
+      return Status.success;
+    }
+
+    // update the state node
+    if (_node.update() != Status.running) {
+      _node.reset();
+    }
+
+    // check transitions that should occur after the state node update
+    if (_handleTransitions(_afterTransitions)) {
+      return Status.success;
+    }
+
+    // return Status.running so that the state machine sequence keeps updating
+    // this node
+    return Status.running;
+  }
+
+  /// Checks if any of the specified transition condition nodes succeed. Returns
+  /// `true` if one of the transition conditions evaluated to `Status.success`,
+  /// and `false` otherwise. If the a transition occurs, the specified `machine`
+  /// is updated to the transition's state key.
+  bool _handleTransitions(final List<_Transition> transitions) {
+    for (var i = 0; i != transitions.length; ++i) {
       // check if the current transition condition node succeeds
-      final transition = _transitions[i];
+      final transition = transitions[i];
       final status = transition._condition.update();
 
       // reset the transition node if it succeeded or failed
@@ -153,19 +195,11 @@ class _Transitional extends Decorator {
       // return Status.success so that the state machine's sequence advances
       if (status == Status.success) {
         _machine._nextIndex = transition._key;
-        return Status.success;
+        return true;
       }
     }
 
-    // evaluate the decorated node; this is the node evaluated when no
-    // transitions occur
-    if (_node.update() != Status.running) {
-      _node.reset();
-    }
-
-    // return Status.running so that the state machine sequence keeps updating
-    // this node
-    return Status.running;
+    return false;
   }
 }
 
@@ -176,7 +210,7 @@ class _Transitional extends Decorator {
 class _MachineTransition extends Node {
   final _StateMachineBase _machine;
 
-  _MachineTransition(final this._machine);
+  const _MachineTransition(final this._machine);
 
   @override
   Status update() {

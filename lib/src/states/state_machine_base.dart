@@ -23,7 +23,9 @@ class _StateMachineBase extends Node {
 
   @override
   Status update() {
-    assert(_states.every((state) => !identical(state, _State._invalid)));
+    // commented this assert out because we might want to define a state
+    // inside another state
+    // assert(_states.every((state) => !identical(state, _State._invalid)));
     return _states[_index].update();
   }
 }

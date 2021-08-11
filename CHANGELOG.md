@@ -1,3 +1,22 @@
+0.0.8
+
+- Removed assert to check that all states are defined on calls to `update()` of
+a [StateMachine] so that a state can be defined during an update by the state
+[Node] itself. This allows for dynamic state definitions.
+- Added the [TransitionGroup] enum that represents the execution order of a
+state transition.
+- When defining a state transition, there is now the option to set the order of
+evaluation for the transition condition. A transition condition can be evaluated
+(before), (after) or (before and after) the state update node. This allows
+transitions to occur at one or either point in order to transition during the
+same call to the `update()` method of a state.
+
+Example: A state transition condition checks a counter, the update node of the
+state updates the counter. If the transition condition is only checked before
+the state update, then a transition will not occur until the next call to the
+`update()` method of the state, but it might be desireable to transition in the
+same call to avoid having to call `update()` again.
+
 0.0.7
 
 - BREAKING CHANGE: new Subject, DataSubject, FutureSubject & Observer interfaces

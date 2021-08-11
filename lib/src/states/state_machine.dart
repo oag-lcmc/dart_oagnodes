@@ -67,14 +67,14 @@ class StateMachine<TEnum> extends _StateMachineBase {
   /// - `on` is the condition [Node] that determines whether to switch states; a
   /// condition is fulfilled if the `on` [Node] returns [Status.success] from
   /// its `update()` method.
-  ///
-  /// Transitions are evaluated before state updates.
+  /// - `group` defines the execution order of the transition condition.
   void transition({
     required final TEnum from,
     required final TEnum to,
     required final Node on,
+    final TransitionGroup group = TransitionGroup.before,
   }) {
-    _states[_enumAsInt(from)].add(_Transition(on, _enumAsInt(to)));
+    _states[_enumAsInt(from)].add(group, _Transition(on, _enumAsInt(to)));
   }
 
   /// Change the current state of [StateMachine] instance to the
