@@ -12,11 +12,7 @@ class _State extends Node {
       Sequence([Identity.running], isPartial: false);
 
   /// Placeholder [_State] to initialize a [List] of [_State].
-  static final _invalid = _State(
-    _StateMachineBase._invalid,
-    isPartial: true,
-    shouldUpdateMachineOnTransition: false,
-  );
+  static final _invalid = _State(_StateMachineBase._invalid, isPartial: true);
 
   final _Transitional _transitional;
   Sequence _sequence;
@@ -38,7 +34,6 @@ class _State extends Node {
     final Node? update,
     final Node? exit,
     required final bool isPartial,
-    required final bool shouldUpdateMachineOnTransition,
   })  :
         // the update part of the state will check for transitions, if no
         // transition is triggered or exists, the update method is called for
@@ -75,46 +70,26 @@ class _State extends Node {
       if (exit != null) {
         // and an exit node
         _sequence = Sequence(
-          [
-            enter,
-            _transitional,
-            exit,
-            _MachineTransition(machine,
-                shouldUpdateMachine: shouldUpdateMachineOnTransition)
-          ],
+          [enter, _transitional, exit, _MachineTransition(machine)],
           isPartial: isPartial,
         );
       } else {
         // but no exit node
         _sequence = Sequence(
-          [
-            enter,
-            _transitional,
-            _MachineTransition(machine,
-                shouldUpdateMachine: shouldUpdateMachineOnTransition)
-          ],
+          [enter, _transitional, _MachineTransition(machine)],
           isPartial: isPartial,
         );
       }
     } else if (exit != null) {
       // there's no enter node, but there is an exit node
       _sequence = Sequence(
-        [
-          _transitional,
-          exit,
-          _MachineTransition(machine,
-              shouldUpdateMachine: shouldUpdateMachineOnTransition)
-        ],
+        [_transitional, exit, _MachineTransition(machine)],
         isPartial: isPartial,
       );
     } else {
       // there is no enter or exit node
       _sequence = Sequence(
-        [
-          _transitional,
-          _MachineTransition(machine,
-              shouldUpdateMachine: shouldUpdateMachineOnTransition)
-        ],
+        [_transitional, _MachineTransition(machine)],
         isPartial: isPartial,
       );
     }
@@ -237,36 +212,18 @@ class _Transitional extends Decorator {
 /// next state.
 class _MachineTransition extends Node {
   final _StateMachineBase _machine;
-  final void Function(_MachineTransition) _updater;
 
-  _MachineTransition(final this._machine, {bool shouldUpdateMachine = false})
-      : _updater = shouldUpdateMachine ? _transitionUpdate : _transitionOnly;
+  _MachineTransition(final this._machine);
 
   @override
   Status update() {
-    _updater(this);
+    // reset the state the state machine is switching to because it might have
+    // been left in a updated state by a previous transition
+    _machine._states[_machine._nextIndex].reset();
+
+    // set the state machine's current index to the transitioned state
+    _machine._index = _machine._nextIndex;
+
     return Status.success;
   }
-
-  static final void Function(_MachineTransition) _transitionOnly = (self) {
-    // reset the state the state machine is switching to because it might have
-    // been left in a updated state by a previous transition
-    self._machine._states[self._machine._nextIndex].reset();
-
-    // set the state machine's current index to the transitioned state
-    self._machine._index = self._machine._nextIndex;
-  };
-
-  static final void Function(_MachineTransition) _transitionUpdate = (self) {
-    // reset the state the state machine is switching to because it might have
-    // been left in a updated state by a previous transition
-    self._machine._states[self._machine._nextIndex].reset();
-
-    // set the state machine's current index to the transitioned state
-    self._machine._index = self._machine._nextIndex;
-
-    print('did update');
-    // there was a transition, tell the state machine to update itself
-    self._machine.update();
-  };
 }

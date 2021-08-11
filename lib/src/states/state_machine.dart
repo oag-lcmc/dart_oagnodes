@@ -53,7 +53,6 @@ class StateMachine<TEnum> extends _StateMachineBase {
     final Node? update,
     final Node? exit,
     final bool isPartial = false,
-    final bool shouldUpdateMachineOnTransition = false,
   }) {
     _states[_enumAsInt(state)] = _State(
       this,
@@ -61,7 +60,6 @@ class StateMachine<TEnum> extends _StateMachineBase {
       enter: enter,
       exit: exit,
       isPartial: isPartial,
-      shouldUpdateMachineOnTransition: shouldUpdateMachineOnTransition,
     );
   }
 

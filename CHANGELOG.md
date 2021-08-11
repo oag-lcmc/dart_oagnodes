@@ -1,3 +1,7 @@
+0.0.10
+
+- Removed `shouldUpdateStateMachineOnTransition` for further testing.
+
 0.0.9
 
 - [TransitionGroup] renamed to [EvaluationOrder].

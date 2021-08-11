@@ -376,14 +376,12 @@ void main() {
     autoSm.define(
       CounterState.add,
       update: IncrementCounter(counter, RandomPlusIncrementer(upperBound: 10)),
-      shouldUpdateMachineOnTransition: true,
     );
 
     autoSm.define(
       CounterState.subtract,
       update: IncrementCounter(counter, RandomMinusIncrementer(upperBound: 10)),
       enter: Print('subtract - enter'),
-      shouldUpdateMachineOnTransition: true,
     );
 
     autoSm.transition(
