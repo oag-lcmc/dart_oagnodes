@@ -12,7 +12,11 @@ class _State extends Node {
       Sequence([Identity.running], isPartial: false);
 
   /// Placeholder [_State] to initialize a [List] of [_State].
-  static final _invalid = _State(_StateMachineBase._invalid, isPartial: true);
+  static final _invalid = _State(
+    _StateMachineBase._invalid,
+    isPartial: true,
+    shouldUpdateMachineOnTransition: false,
+  );
 
   final _Transitional _transitional;
   Sequence _sequence;
@@ -34,12 +38,16 @@ class _State extends Node {
     final Node? update,
     final Node? exit,
     required final bool isPartial,
+    required final bool shouldUpdateMachineOnTransition,
   })  :
         // the update part of the state will check for transitions, if no
         // transition is triggered or exists, the update method is called for
         // the state, if no update node is specified, a Status.running identity
         // node is used as a placeholder
-        _transitional = _Transitional(machine, update ?? Identity.running),
+        _transitional = _Transitional(
+          machine,
+          update ?? Identity.running,
+        ),
         _sequence = _State._placeholderSequence {
     /* equivalent conditional expression
     enter != null
@@ -67,32 +75,52 @@ class _State extends Node {
       if (exit != null) {
         // and an exit node
         _sequence = Sequence(
-          [enter, _transitional, exit, _MachineTransition(machine)],
+          [
+            enter,
+            _transitional,
+            exit,
+            _MachineTransition(machine,
+                shouldUpdateMachine: shouldUpdateMachineOnTransition)
+          ],
           isPartial: isPartial,
         );
       } else {
         // but no exit node
         _sequence = Sequence(
-          [enter, _transitional, _MachineTransition(machine)],
+          [
+            enter,
+            _transitional,
+            _MachineTransition(machine,
+                shouldUpdateMachine: shouldUpdateMachineOnTransition)
+          ],
           isPartial: isPartial,
         );
       }
     } else if (exit != null) {
       // there's no enter node, but there is an exit node
       _sequence = Sequence(
-        [_transitional, exit, _MachineTransition(machine)],
+        [
+          _transitional,
+          exit,
+          _MachineTransition(machine,
+              shouldUpdateMachine: shouldUpdateMachineOnTransition)
+        ],
         isPartial: isPartial,
       );
     } else {
       // there is no enter or exit node
       _sequence = Sequence(
-        [_transitional, _MachineTransition(machine)],
+        [
+          _transitional,
+          _MachineTransition(machine,
+              shouldUpdateMachine: shouldUpdateMachineOnTransition)
+        ],
         isPartial: isPartial,
       );
     }
   }
 
-  void add(final TransitionGroup group, final _Transition transition) {
+  void add(final EvaluationOrder group, final _Transition transition) {
     _transitional.add(group, transition);
   }
 
@@ -139,15 +167,15 @@ class _Transitional extends Decorator {
         _afterTransitions = List.empty(growable: true),
         super(node);
 
-  void add(final TransitionGroup group, final _Transition transition) {
+  void add(final EvaluationOrder group, final _Transition transition) {
     switch (group) {
-      case TransitionGroup.before:
+      case EvaluationOrder.before:
         _beforeTransitions.add(transition);
         break;
-      case TransitionGroup.after:
+      case EvaluationOrder.after:
         _afterTransitions.add(transition);
         break;
-      case TransitionGroup.beforeAndAfter:
+      case EvaluationOrder.beforeAndAfter:
         _beforeTransitions.add(transition);
         _afterTransitions.add(transition);
         break;
@@ -209,18 +237,36 @@ class _Transitional extends Decorator {
 /// next state.
 class _MachineTransition extends Node {
   final _StateMachineBase _machine;
+  final void Function(_MachineTransition) _updater;
 
-  const _MachineTransition(final this._machine);
+  _MachineTransition(final this._machine, {bool shouldUpdateMachine = false})
+      : _updater = shouldUpdateMachine ? _transitionUpdate : _transitionOnly;
 
   @override
   Status update() {
-    // reset the state the state machine is switching to because it might have
-    // been left in a updated state by a previous transition
-    _machine._states[_machine._nextIndex].reset();
-
-    // set the state machine's current index to the transitioned state
-    _machine._index = _machine._nextIndex;
-
+    _updater(this);
     return Status.success;
   }
+
+  static final void Function(_MachineTransition) _transitionOnly = (self) {
+    // reset the state the state machine is switching to because it might have
+    // been left in a updated state by a previous transition
+    self._machine._states[self._machine._nextIndex].reset();
+
+    // set the state machine's current index to the transitioned state
+    self._machine._index = self._machine._nextIndex;
+  };
+
+  static final void Function(_MachineTransition) _transitionUpdate = (self) {
+    // reset the state the state machine is switching to because it might have
+    // been left in a updated state by a previous transition
+    self._machine._states[self._machine._nextIndex].reset();
+
+    // set the state machine's current index to the transitioned state
+    self._machine._index = self._machine._nextIndex;
+
+    print('did update');
+    // there was a transition, tell the state machine to update itself
+    self._machine.update();
+  };
 }

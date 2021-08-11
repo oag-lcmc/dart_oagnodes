@@ -1,3 +1,11 @@
+0.0.9
+
+- [TransitionGroup] renamed to [EvaluationOrder].
+- When defining a state, the `group` parameter is renamed to `order`.
+- An additional parameter `shouldUpdateStateMachineOnTransition` is added to
+defining a state, when true, if the state machine transitions to a new state,
+it will automatically call the `update()` method.
+
 0.0.8
 
 - Removed assert to check that all states are defined on calls to `update()` of

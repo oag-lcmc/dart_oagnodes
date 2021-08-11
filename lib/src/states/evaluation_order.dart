@@ -1,7 +1,7 @@
 part of nodes;
 
 /// Determines the execution order of the transition condition.
-enum TransitionGroup {
+enum EvaluationOrder {
   /// The transition condition is checked before the state update.
   before,
 

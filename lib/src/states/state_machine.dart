@@ -53,9 +53,16 @@ class StateMachine<TEnum> extends _StateMachineBase {
     final Node? update,
     final Node? exit,
     final bool isPartial = false,
+    final bool shouldUpdateMachineOnTransition = false,
   }) {
-    _states[_enumAsInt(state)] = _State(this,
-        update: update, enter: enter, exit: exit, isPartial: isPartial);
+    _states[_enumAsInt(state)] = _State(
+      this,
+      update: update,
+      enter: enter,
+      exit: exit,
+      isPartial: isPartial,
+      shouldUpdateMachineOnTransition: shouldUpdateMachineOnTransition,
+    );
   }
 
   /// Defines a transition from a state to another state based on a
@@ -72,9 +79,9 @@ class StateMachine<TEnum> extends _StateMachineBase {
     required final TEnum from,
     required final TEnum to,
     required final Node on,
-    final TransitionGroup group = TransitionGroup.before,
+    final EvaluationOrder order = EvaluationOrder.before,
   }) {
-    _states[_enumAsInt(from)].add(group, _Transition(on, _enumAsInt(to)));
+    _states[_enumAsInt(from)].add(order, _Transition(on, _enumAsInt(to)));
   }
 
   /// Change the current state of [StateMachine] instance to the

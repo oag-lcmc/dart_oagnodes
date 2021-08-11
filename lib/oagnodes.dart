@@ -28,7 +28,7 @@ part 'src/notifiers/observer.dart';
 part 'src/notifiers/future_subject.dart';
 
 // state machines
-part 'src/states/transition_group.dart';
+part 'src/states/evaluation_order.dart';
 part 'src/states/state_machine_base.dart';
 part 'src/states/state_machine.dart';
 part 'src/states/state.dart';

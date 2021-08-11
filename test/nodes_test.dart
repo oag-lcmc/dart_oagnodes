@@ -326,10 +326,10 @@ void main() {
     );
 
     sm.transition(
-      from: CounterState.add,
-      to: CounterState.subtract,
-      on: Closure(() => counter.value > 16 ? Status.success : Status.failure),
-    );
+        from: CounterState.add,
+        to: CounterState.subtract,
+        on: Closure(() => counter.value > 16 ? Status.success : Status.failure),
+        order: EvaluationOrder.after);
 
     sm.transition(
       from: CounterState.subtract,
@@ -370,6 +370,41 @@ void main() {
         expect(sm.current != previous, isTrue);
       }
     });
+
+    final autoSm = StateMachine<CounterState>(CounterState.values);
+
+    autoSm.define(
+      CounterState.add,
+      update: IncrementCounter(counter, RandomPlusIncrementer(upperBound: 10)),
+      shouldUpdateMachineOnTransition: true,
+    );
+
+    autoSm.define(
+      CounterState.subtract,
+      update: IncrementCounter(counter, RandomMinusIncrementer(upperBound: 10)),
+      enter: Print('subtract - enter'),
+      shouldUpdateMachineOnTransition: true,
+    );
+
+    autoSm.transition(
+      from: CounterState.add,
+      to: CounterState.subtract,
+      on: Closure(() => counter.value > 10 ? Status.success : Status.failure),
+      order: EvaluationOrder.after,
+    );
+
+    autoSm.transition(
+      from: CounterState.subtract,
+      to: CounterState.add,
+      on: Closure(() => counter.value < -10 ? Status.success : Status.failure),
+    );
+
+    test('State machine transition test - after', () {
+      final currentState = autoSm.current;
+      while (autoSm.current == currentState) {
+        autoSm.update();
+      }
+    });
   });
 }
 
@@ -383,6 +418,30 @@ class Counter {
 
 abstract class Incrementer {
   int getValue();
+}
+
+class RandomPlusIncrementer implements Incrementer {
+  final Random _random = Random();
+  final int _upperBound;
+
+  RandomPlusIncrementer({required int upperBound}) : _upperBound = upperBound;
+
+  @override
+  int getValue() {
+    return _random.nextInt(_upperBound);
+  }
+}
+
+class RandomMinusIncrementer implements Incrementer {
+  final Random _random = Random();
+  final int _upperBound;
+
+  RandomMinusIncrementer({required int upperBound}) : _upperBound = upperBound;
+
+  @override
+  int getValue() {
+    return -_random.nextInt(_upperBound);
+  }
 }
 
 class RandomIncrementer implements Incrementer {
